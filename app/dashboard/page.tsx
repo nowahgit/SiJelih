@@ -1,0 +1,460 @@
+"use client";
+
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth, db } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
+import VerifyCard from "@/components/VerifyCard";
+import GempaAlert from "@/components/GempaAlert";
+import { collection, doc, setDoc, query, orderBy, getDocs } from "firebase/firestore";
+import { getLatestBMKGData } from "@/lib/bmkg";
+import { signOut } from "firebase/auth";
+import LoadingScreen from "@/components/LoadingScreen";
+import { useToast } from "@/hooks/useToast";
+import Dialog from "@/components/Dialog";
+import PageTransition from "@/components/PageTransition";
+import { SkeletonCard } from "@/components/ui/SkeletonCard";
+import { SkeletonVerifyResult } from "@/components/ui/SkeletonVerifyResult";
+import { SkeletonDashboardPanel } from "@/components/ui/SkeletonDashboardPanel";
+import { SkeletonProfile } from "@/components/ui/SkeletonProfile";
+
+export default function DashboardPage() {
+  const [user, loadingAuth] = useAuthState(auth);
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const [activeMenu, setActiveMenu] = useState<"verifikasi" | "histori" | "profil">("verifikasi");
+  const [histori, setHistori] = useState<any[]>([]);
+  const [loadingHistori, setLoadingHistori] = useState(true);
+
+  const [activeTab, setActiveTab] = useState<"text" | "photo">("text");
+  const [text, setText] = useState("");
+  const [kodeWilayah, setKodeWilayah] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [savingObj, setSavingObj] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [logoutConfirmCtx, setLogoutConfirmCtx] = useState(false);
+  const [extractedTextOpen, setExtractedTextOpen] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState("");
+  const [geoResult, setGeoResult] = useState<any>(null);
+
+  useEffect(() => {
+    if (!loadingAuth && !user) router.push("/login");
+  }, [user, loadingAuth, router]);
+
+  useEffect(() => {
+    async function fetchHistori() {
+      if (!user) return;
+      try {
+        const historyRef = collection(db, "verifications", user.uid, "history");
+        const q = query(historyRef, orderBy("savedAt", "desc"));
+        const snapshot = await getDocs(q);
+        const data: any[] = [];
+        snapshot.forEach((doc) => data.push({ id: doc.id, ...doc.data() }));
+        setHistori(data);
+      } catch {
+      } finally {
+        setLoadingHistori(false);
+      }
+    }
+    fetchHistori();
+  }, [user]);
+
+  if (loadingAuth || !user) {
+    return <LoadingScreen isVisible={true} />;
+  }
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleGeolocation = () => {
+    setGeoLoading(true); setGeoError(""); setGeoResult(null);
+    if (!navigator.geolocation) {
+      setGeoError("Geolocation tidak didukung oleh browser Anda.");
+      setGeoLoading(false); return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude: lat, longitude: lon } = pos.coords;
+          const nomRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+          const nomData = await nomRes.json();
+          const loc = nomData?.address?.suburb || nomData?.address?.city_district || "";
+          if (loc) setKodeWilayah(loc);
+
+          const bmkgData = await getLatestBMKGData();
+          const lastQuake = bmkgData?.autoGempa;
+          let distanceKm = 0;
+          if (lastQuake?.Coordinates) {
+            const [qLat, qLon] = lastQuake.Coordinates.split(",").map(Number);
+            distanceKm = calculateDistance(lat, lon, qLat, qLon);
+          }
+          let weather = null;
+          try {
+             const wRes = await fetch(`https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=${loc}`);
+             const wData = await wRes.json();
+             weather = wData?.data?.[0]?.cuaca?.[0]?.[0] || null;
+          } catch {}
+          setGeoResult({ location: loc || "Lokasi Anda", weather, lastQuake, distanceKm });
+        } catch {
+          setGeoError("Gagal mengambil data lokasi.");
+        } finally { setGeoLoading(false); }
+      },
+      () => { setGeoError("Izin lokasi ditolak. Masukkan kode wilayah secara manual."); setGeoLoading(false); }
+    );
+  };
+
+  const handleVerify = async () => {
+    if (activeTab === "text" && text.length < 10) return;
+    if (activeTab === "photo" && !imageFile) return;
+    setLoading(true); setResult(null);
+    try {
+      let data;
+      if (activeTab === "text") {
+        const res = await fetch("/api/verify", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, kodeWilayah })
+        });
+        data = await res.json();
+      } else {
+        const res = await fetch("/api/verify-image", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64: imagePreview?.split(",")[1], mimeType: imageFile?.type, kodeWilayah })
+        });
+        data = await res.json();
+      }
+      setResult(data);
+    } catch {
+    } finally { setLoading(false); }
+  };
+
+  const handleSaveHistori = async () => {
+    if (!result || !user) return;
+    setSavingObj(true);
+    try {
+      const historyRef = collection(db, "verifications", user.uid, "history");
+      const docRef = doc(historyRef);
+      const newEntry = { ...result, savedAt: new Date().toISOString(), id: docRef.id };
+      await setDoc(docRef, newEntry);
+      setHistori([newEntry, ...histori]);
+      toast("Berhasil disimpan ke histori", "success");
+    } catch {
+      toast("Gagal menyimpan histori", "error");
+    } finally {
+      setSavingObj(false);
+    }
+  };
+
+  const getRelativeTime = (isoString: string) => {
+    const diff = Math.floor((new Date().getTime() - new Date(isoString).getTime()) / 60000);
+    if (diff < 1) return "Baru saja";
+    if (diff < 60) return `${diff} menit lalu`;
+    if (diff < 1440) return `${Math.floor(diff/60)} jam lalu`;
+    return `${Math.floor(diff/1440)} hari lalu`;
+  };
+
+  const getBadgeClass = (verdict: string) => {
+    switch (verdict) {
+      case "TERKONFIRMASI": return "bg-[#dcfce7] text-[#166534] border-[#bbf7d0]";
+      case "BELUM_TERVERIFIKASI": return "bg-[#fef9c3] text-[#854d0e] border-[#fef08a]";
+      case "HOAKS": return "bg-[#fee2e2] text-[#991b1b] border-[#fecaca]";
+      default: return "bg-[#f3f4f6] text-[#374151] border-[#e5e7eb]";
+    }
+  };
+
+  const getProgressColor = (verdict: string) => {
+    switch (verdict) {
+      case "TERKONFIRMASI": return "bg-[#166534]";
+      case "BELUM_TERVERIFIKASI": return "bg-[#ca8a04]";
+      case "HOAKS": return "bg-[#b91c1c]";
+      default: return "bg-[#6b7280]";
+    }
+  };
+
+  const getProgressWidthClass = (conf: number) => {
+    if (conf >= 95) return "w-full"; if (conf >= 85) return "w-11/12"; if (conf >= 75) return "w-4/5";
+    if (conf >= 65) return "w-2/3"; if (conf >= 55) return "w-7/12"; if (conf >= 45) return "w-1/2";
+    if (conf >= 35) return "w-5/12"; if (conf >= 25) return "w-1/3"; if (conf >= 15) return "w-1/4";
+    if (conf >= 5) return "w-2/12"; return "w-1/12";
+  };
+
+  return (
+    <div className="flex h-screen bg-[#f9fafb] flex-col lg:flex-row overflow-hidden font-sans text-[#111827]">
+      <aside className="hidden lg:flex flex-col w-[256px] bg-[#111827] text-[#9ca3af] flex-shrink-0 relative h-full">
+        <div className="p-[20px_16px] border-b border-[#1f2937] flex items-center justify-between">
+          <img src="/image/LOGO_WHITE.png" alt="SiJelih" className="h-[44px] w-auto" />
+        </div>
+        <nav className="flex-1 flex flex-col gap-1 p-[12px] overflow-y-auto">
+          <div className="text-[11px] font-[500] tracking-wider text-[#4b5563] uppercase px-[12px] mb-1 mt-2">Menu</div>
+          
+          <button onClick={() => setActiveMenu("verifikasi")} className={`flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] ${activeMenu === "verifikasi" ? "bg-[#1d4ed8] text-white" : "hover:bg-[#1f2937] hover:text-white"}`}>
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span>Verifikasi</span>
+          </button>
+          <button onClick={() => setActiveMenu("histori")} className={`flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] ${activeMenu === "histori" ? "bg-[#1d4ed8] text-white" : "hover:bg-[#1f2937] hover:text-white"}`}>
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+            <span>Histori</span>
+          </button>
+          
+          <button onClick={() => router.push("/dashboard/massal")} className="flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] hover:bg-[#1f2937] hover:text-white">
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="M19 10v6"/><path d="M16 13h6"/></svg>
+            <span>Massal</span>
+          </button>
+
+          <div className="text-[11px] font-[500] tracking-wider text-[#4b5563] uppercase px-[12px] mb-1 mt-6">Akun</div>
+          
+          <button onClick={() => setActiveMenu("profil")} className={`flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] ${activeMenu === "profil" ? "bg-[#1d4ed8] text-white" : "hover:bg-[#1f2937] hover:text-white"}`}>
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Profil</span>
+          </button>
+        </nav>
+        <div className="p-4 border-t border-[#1f2937]">
+          <button onClick={() => setLogoutConfirmCtx(true)} className="w-full flex items-center gap-3 px-[12px] py-[8px] text-[13px] font-[500] text-[#ef4444] hover:bg-[#1f2937] hover:text-[#f87171] rounded-[6px] transition-colors duration-150">
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span>Keluar</span>
+          </button>
+        </div>
+      </aside>
+
+      <Dialog isOpen={logoutConfirmCtx} onClose={() => setLogoutConfirmCtx(false)} title="Konfirmasi Keluar" size="sm">
+        <p className="text-[14px] text-[#4b5563] mb-[20px]">Apakah Anda yakin ingin keluar dari SiJelih?</p>
+        <div className="flex justify-end gap-[10px]">
+          <button onClick={() => setLogoutConfirmCtx(false)} className="bg-white border border-[#d1d5db] text-[#374151] px-[16px] py-[8px] rounded-[6px] text-[13px] font-[600] hover:bg-[#f9fafb] transition-colors">Batal</button>
+          <button onClick={() => { setLogoutConfirmCtx(false); signOut(auth); }} className="bg-[#ef4444] text-white px-[16px] py-[8px] rounded-[6px] text-[13px] font-[600] hover:bg-[#dc2626] transition-colors">Keluar</button>
+        </div>
+      </Dialog>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="h-[56px] bg-white border-b border-[#e5e7eb] px-[24px] flex items-center justify-between flex-shrink-0 z-10 transition-colors duration-150">
+          <div className="text-[13px] text-[#6b7280]">
+            Dashboard <span className="mx-1">/</span> <span className="capitalize">{activeMenu}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[13px] font-[500] text-[#374151] hidden sm:block">{user.displayName}</span>
+            <img src={user.photoURL || ""} alt="Avatar" className="w-[32px] h-[32px] rounded-full object-cover shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb]" />
+          </div>
+        </header>
+
+        <main className="flex-1 flex flex-col min-w-0">
+          <PageTransition>
+            {activeMenu === "verifikasi" && <GempaAlert />}
+            
+            <div className="p-[24px] flex flex-col w-full max-w-5xl mx-auto pb-24 lg:pb-8">
+            
+            {activeMenu === "verifikasi" && (
+              <div className="flex flex-col gap-6 w-full">
+                <div className="bg-white p-[20px] rounded-[8px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb] flex flex-col gap-5">
+                  <h1 className="text-[18px] font-[600] text-[#111827]">Verifikasi Informasi</h1>
+                  
+                  <div className="flex border-b border-[#e5e7eb] gap-4">
+                    <button onClick={() => setActiveTab("text")} className={`pb-2 text-[13px] font-[500] transition-colors duration-150 ${activeTab === "text" ? "border-b-2 border-[#1d4ed8] text-[#1d4ed8]" : "text-[#6b7280] hover:text-[#374151]"}`}>Pesan Teks</button>
+                    <button onClick={() => setActiveTab("photo")} className={`pb-2 text-[13px] font-[500] transition-colors duration-150 ${activeTab === "photo" ? "border-b-2 border-[#1d4ed8] text-[#1d4ed8]" : "text-[#6b7280] hover:text-[#374151]"}`}>Gambar & Foto</button>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-[500] text-[#374151]">{activeTab === "text" ? "Teks Verifikasi" : "Unggah Gambar"}</label>
+                    {activeTab === "text" ? (
+                      <textarea value={text} onChange={(e) => setText(e.target.value)} className="w-full bg-white border border-[#d1d5db] rounded-[6px] p-[8px_12px] h-32 resize-none focus:outline-none focus:ring-[2px] focus:ring-[#3b82f6] focus:border-transparent transition-colors duration-150 text-[14px] placeholder-[#9ca3af]" placeholder="Paste informasi atau berita bencana yang ingin kamu verifikasi..." />
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        <input type="file" accept="image/*" capture="environment" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
+                        {!imagePreview ? (
+                          <div onClick={() => fileInputRef.current?.click()} className="border-[1.5px] border-dashed border-[#d1d5db] rounded-[6px] p-[32px] text-center text-[#6b7280] text-[13px] font-[500] cursor-pointer hover:bg-[#f9fafb] transition-colors duration-150">Ambil foto atau pilih gambar file</div>
+                        ) : (
+                          <div className="flex flex-col items-start gap-3">
+                            <img src={imagePreview} alt="Preview" className="w-full max-w-sm max-h-[240px] object-contain rounded-[6px] border border-[#d1d5db] bg-[#f9fafb]" />
+                            <button onClick={() => { setImagePreview(null); setImageFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="text-[13px] font-[500] text-[#374151] bg-white border border-[#d1d5db] hover:bg-[#f9fafb] px-[12px] py-[6px] rounded-[6px] transition-colors duration-150 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Ganti Foto</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-[500] text-[#374151]">Kode Wilayah Administratif</label>
+                    <input value={kodeWilayah} onChange={(e) => setKodeWilayah(e.target.value)} type="text" className="w-full bg-white border border-[#d1d5db] rounded-[6px] p-[8px_12px] focus:outline-none focus:ring-[2px] focus:ring-[#3b82f6] focus:border-transparent transition-colors duration-150 text-[14px] placeholder-[#9ca3af]" placeholder="Opsional (contoh: 33.72.01.1001)" />
+                  </div>
+                  
+                  <div className="flex flex-col gap-2 mt-2">
+                    <div className="bg-white border border-[#d1d5db] rounded-[6px] p-[16px] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <span className="text-[13px] font-[500] text-[#374151]">Cek status bahaya di lokasi saya sekarang</span>
+                      <button onClick={handleGeolocation} disabled={geoLoading} className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb] px-[16px] py-[8px] rounded-[6px] font-[500] text-[14px] transition-colors duration-150 disabled:opacity-50 whitespace-nowrap shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                        {geoLoading ? "Mendeteksi lokasi..." : "Gunakan Lokasi Saya"}
+                      </button>
+                    </div>
+                    {geoError && <span className="text-[#ef4444] text-[13px] mt-1">{geoError}</span>}
+                    {geoResult && (
+                      <div className="bg-[#f9fafb] border border-[#d1d5db] rounded-[6px] p-[12px] text-[13px] text-[#374151] flex flex-col gap-1.5">
+                        <div className="font-[600] text-[#111827]">Lokasi: {geoResult.location}</div>
+                        {geoResult.weather && <div>Cuaca saat ini: {geoResult.weather.weather_desc}, {geoResult.weather.t}°C</div>}
+                        {geoResult.lastQuake && <div className="text-[#991b1b] font-[500]">Gempa terakhir: M{geoResult.lastQuake.Magnitude} di {geoResult.lastQuake.Wilayah} ({geoResult.distanceKm} km dari lokasi)</div>}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-start md:justify-end mt-2 pt-5 border-t border-[#e5e7eb]">
+                    <button onClick={handleVerify} disabled={loading || (activeTab === "text" ? text.length < 10 : !imageFile)} className="bg-[#1d4ed8] hover:bg-[#1e40af] disabled:bg-[#d1d5db] disabled:hover:bg-[#d1d5db] text-white px-[16px] py-[8px] rounded-[6px] font-[500] text-[14px] transition-colors duration-150 flex items-center justify-center min-w-[200px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] disabled:opacity-75 disabled:cursor-not-allowed">
+                      {loading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-[14px] h-[14px] border-[1.5px] border-white border-t-transparent rounded-full animate-spin"></div>
+                          Memverifikasi...
+                        </div>
+                      ) : "Verifikasi Sekarang"}
+                    </button>
+                  </div>
+                </div>
+
+                {loading && <SkeletonVerifyResult />}
+
+                {result && !result.error && !loading && (
+                  <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <VerifyCard result={result} />
+                    {activeTab === "photo" && result.extractedText && (
+                      <div className="bg-white border border-[#e5e7eb] rounded-[8px] p-[16px] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                        <button onClick={() => setExtractedTextOpen(!extractedTextOpen)} className="w-full flex justify-between items-center font-[500] text-[#374151] text-[13px] hover:text-[#111827] transition-colors duration-150">
+                          Teks terdeteksi dari gambar <span className="text-[#6b7280] font-normal">{extractedTextOpen ? "Sembunyikan" : "Tampilkan"}</span>
+                        </button>
+                        {extractedTextOpen && <div className="mt-3 text-[13px] text-[#4b5563] border-t border-[#e5e7eb] pt-3 whitespace-pre-wrap leading-relaxed">{result.extractedText}</div>}
+                      </div>
+                    )}
+                    <button onClick={handleSaveHistori} disabled={savingObj} className="bg-white flex justify-center border border-[#d1d5db] hover:bg-[#f9fafb] text-[#374151] px-[16px] py-[8px] rounded-[6px] font-[500] text-[14px] transition-colors duration-150 shadow-[0_1px_2px_rgba(0,0,0,0.05)] w-full disabled:opacity-75 disabled:cursor-not-allowed">
+                      {savingObj ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-[14px] h-[14px] border-[1.5px] border-current border-t-transparent rounded-full animate-spin"></div>
+                          Menyimpan...
+                        </div>
+                      ) : "Simpan ke Histori"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeMenu === "histori" && (
+              <div className="flex flex-col gap-6 w-full">
+                <h1 className="text-[18px] font-[600] text-[#111827]">Histori Verifikasi</h1>
+                {loadingHistori ? (
+                  <div className="flex flex-col gap-4">
+                    {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
+                  </div>
+                ) : histori.length === 0 ? (
+                  <div className="bg-white p-[32px] rounded-[8px] border border-[#e5e7eb] text-center text-[#6b7280] text-[13px] font-[500] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Belum ada riwayat verifikasi</div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {histori.map((item) => {
+                      const txt = item.inputText || item.extractedText || "Verifikasi via foto";
+                      return (
+                        <div key={item.id} className="bg-white p-[20px] rounded-[8px] border border-[#e5e7eb] shadow-[0_1px_2px_rgba(0,0,0,0.05)] flex flex-col gap-3">
+                          <div className="flex justify-between items-start">
+                            <span className={`px-[8px] py-[2px] rounded-[4px] text-[11px] font-[600] border ${getBadgeClass(item.verdict)}`}>{item.verdict}</span>
+                            <span className="text-[12px] text-[#6b7280]">{new Date(item.savedAt).toLocaleString("id-ID")}</span>
+                          </div>
+                          <p className="text-[14px] text-[#374151] italic leading-relaxed">"{txt.length > 120 ? txt.substring(0, 120) + '...' : txt}"</p>
+                          <p className="text-[13px] text-[#6b7280] mt-1 line-clamp-2">{item.alasan}</p>
+                          <div className="flex flex-col gap-1 mt-3">
+                            <div className="flex justify-between text-[11px] font-[600] text-[#6b7280]"><span>Tingkat Kepercayaan</span><span>{item.confidence}%</span></div>
+                            <div className="w-full bg-[#f3f4f6] rounded-[4px] h-[6px]"><div className={`h-[6px] rounded-[4px] ${getProgressColor(item.verdict)} ${getProgressWidthClass(item.confidence)}`}></div></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeMenu === "profil" && (
+              <div className="flex flex-col gap-6 w-full">
+                <h1 className="text-[18px] font-[600] text-[#111827]">Profil & Statistik Akun</h1>
+                {loadingHistori ? (
+                  <SkeletonProfile />
+                ) : (
+                  <>
+                    <div className="bg-white p-[20px] rounded-[8px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb] flex flex-col sm:flex-row gap-6 items-center sm:items-start">
+                      <img src={user.photoURL || ""} alt="Avatar" className="w-[80px] h-[80px] rounded-full bg-[#f3f4f6] object-cover border border-[#e5e7eb]" />
+                      <div className="flex flex-col gap-1 items-center sm:items-start flex-1 w-full justify-center h-full pt-2">
+                        <h2 className="text-[16px] font-[600] text-[#111827]">{user.displayName}</h2>
+                        <p className="text-[#6b7280] text-[13px]">{user.email}</p>
+                        <p className="text-[#9ca3af] text-[12px] mt-1">Bergabung: {user.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString("id-ID") : "-"}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                      <div className="bg-white p-[16px_20px] rounded-[8px] border border-[#e5e7eb] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"><p className="text-[24px] font-[700] text-[#111827]">{histori.length}</p><p className="text-[12px] text-[#6b7280] mt-1 font-[500]">VERIFIKASI TOTAL</p></div>
+                      <div className="bg-white p-[16px_20px] rounded-[8px] border border-[#e5e7eb] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"><p className="text-[24px] font-[700] text-[#166534]">{histori.filter(i => i.verdict === "TERKONFIRMASI").length}</p><p className="text-[12px] text-[#6b7280] mt-1 font-[500]">TERKONFIRMASI</p></div>
+                      <div className="bg-white p-[16px_20px] rounded-[8px] border border-[#e5e7eb] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"><p className="text-[24px] font-[700] text-[#991b1b]">{histori.filter(i => i.verdict === "HOAKS").length}</p><p className="text-[12px] text-[#6b7280] mt-1 font-[500]">HOAKS</p></div>
+                      <div className="bg-white p-[16px_20px] rounded-[8px] border border-[#e5e7eb] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"><p className="text-[24px] font-[700] text-[#854d0e]">{histori.filter(i => i.verdict === "BELUM_TERVERIFIKASI").length}</p><p className="text-[12px] text-[#6b7280] mt-1 font-[500]">BELUM TERVERIFIKASI</p></div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          </PageTransition>
+        </main>
+      </div>
+      
+      {activeMenu === "verifikasi" && (
+        <aside className="hidden lg:flex flex-col w-[280px] bg-white border-l border-[#e5e7eb] flex-shrink-0 h-full overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.05)] z-20">
+          <div className="p-[16px] border-b border-[#e5e7eb] flex items-center justify-between">
+            <span className="font-[500] text-[13px] text-[#374151]">Riwayat Terakhir</span>
+            <svg className="w-4 h-4 text-[#9ca3af]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v6h6"/></svg>
+          </div>
+          <div className="flex-1 overflow-y-auto flex flex-col scrollbar-thin scrollbar-thumb-[#d1d5db]">
+            {loadingHistori ? (
+              <SkeletonDashboardPanel />
+            ) : histori.map(item => {
+              const txt = item.inputText || item.extractedText || "Verifikasi via foto";
+              return (
+                <div key={item.id} className="p-[12px_16px] border-b border-[#f3f4f6] hover:bg-[#f9fafb] transition-colors duration-150 flex flex-col gap-1.5 cursor-default">
+                  <div className="flex justify-between items-center">
+                    <span className={`px-[6px] py-[2px] rounded-[4px] text-[10px] font-[600] border ${getBadgeClass(item.verdict)}`}>{item.verdict}</span>
+                    <span className="text-[11px] text-[#9ca3af]">{getRelativeTime(item.savedAt)}</span>
+                  </div>
+                  <p className="text-[12px] text-[#374151] leading-tight line-clamp-2 mt-1">"{txt}"</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] text-[#6b7280] font-[500] whitespace-nowrap">AI Trust {item.confidence}%</span>
+                    <div className="flex-1 bg-[#f3f4f6] rounded-[4px] h-[4px]"><div className={`h-[4px] rounded-[4px] ${getProgressColor(item.verdict)} ${getProgressWidthClass(item.confidence)}`}></div></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
+      )}
+
+      <nav className="lg:hidden fixed bottom-0 w-full bg-white flex justify-around p-3 z-50 text-white pb-safe border-t border-[#e5e7eb] shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
+        <button onClick={() => setActiveMenu("verifikasi")} className={`p-3 rounded-[6px] transition-colors duration-150 ${activeMenu === "verifikasi" ? "bg-[#1d4ed8] text-white" : "text-[#6b7280]"}`}>
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </button>
+        <button onClick={() => setActiveMenu("histori")} className={`p-3 rounded-[6px] transition-colors duration-150 ${activeMenu === "histori" ? "bg-[#1d4ed8] text-white" : "text-[#6b7280]"}`}>
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+        </button>
+        <button onClick={() => router.push("/dashboard/massal")} className="p-3 rounded-[6px] transition-colors duration-150 text-[#6b7280]">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="M19 10v6"/><path d="M16 13h6"/></svg>
+        </button>
+        <button onClick={() => setActiveMenu("profil")} className={`p-3 rounded-[6px] transition-colors duration-150 ${activeMenu === "profil" ? "bg-[#1d4ed8] text-white" : "text-[#6b7280]"}`}>
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </button>
+      </nav>
+    </div>
+  );
+}
