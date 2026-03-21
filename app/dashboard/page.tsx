@@ -19,6 +19,8 @@ import { SkeletonVerifyResult } from "@/components/ui/SkeletonVerifyResult";
 import { SkeletonDashboardPanel } from "@/components/ui/SkeletonDashboardPanel";
 import { SkeletonProfile } from "@/components/ui/SkeletonProfile";
 
+export const dynamic = "force-dynamic";
+
 export default function DashboardPage() {
   const [user, loadingAuth] = useAuthState(auth);
   const { toast } = useToast();

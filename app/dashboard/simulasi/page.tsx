@@ -9,6 +9,8 @@ import LoadingScreen from "@/components/LoadingScreen";
 import PageTransition from "@/components/PageTransition";
 import Dialog from "@/components/Dialog";
 
+export const dynamic = "force-dynamic";
+
 export default function SimulasiPage() {
   const [user, loadingAuth] = useAuthState(auth);
   const router = useRouter();

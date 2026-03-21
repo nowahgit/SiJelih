@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/useToast";
 import PageTransition from "@/components/PageTransition";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
 
+export const dynamic = "force-dynamic";
+
 export default function MassalPage() {
   const [user, loadingAuth] = useAuthState(auth);
   const router = useRouter();
