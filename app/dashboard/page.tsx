@@ -4,6 +4,7 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import VerifyCard from "@/components/VerifyCard";
 import GempaAlert from "@/components/GempaAlert";
 import { collection, doc, setDoc, query, orderBy, getDocs } from "firebase/firestore";
@@ -24,11 +25,16 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const [activeMenu, setActiveMenu] = useState<"verifikasi" | "histori" | "profil">("verifikasi");
+  const searchParams = useSearchParams();
   const [histori, setHistori] = useState<any[]>([]);
   const [loadingHistori, setLoadingHistori] = useState(true);
 
   const [activeTab, setActiveTab] = useState<"text" | "photo">("text");
   const [text, setText] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState("");
+  const [isMicSupported, setIsMicSupported] = useState(true);
+  const recognitionRef = useRef<any>(null);
   const [kodeWilayah, setKodeWilayah] = useState("");
   const [loading, setLoading] = useState(false);
   const [savingObj, setSavingObj] = useState(false);
@@ -43,9 +49,80 @@ export default function DashboardPage() {
   const [geoError, setGeoError] = useState("");
   const [geoResult, setGeoResult] = useState<any>(null);
 
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [hasNewHistory, setHasNewHistory] = useState(false);
+  const [isEmergencyMode, setIsEmergencyMode] = useState(false);
+  const [emergencyLoading, setEmergencyLoading] = useState(false);
+  const [emergencyResult, setEmergencyResult] = useState<any>(null);
+  const emergencyTextareaRef = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => {
     if (!loadingAuth && !user) router.push("/login");
   }, [user, loadingAuth, router]);
+
+  useEffect(() => {
+    const menu = searchParams.get("menu");
+    if (menu === "histori" || menu === "profil") setActiveMenu(menu);
+    else if (menu === "verifikasi") setActiveMenu("verifikasi");
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        setIsMicSupported(false);
+        return;
+      }
+
+      if (!document.getElementById("mic-pulse-style")) {
+        const style = document.createElement("style");
+        style.id = "mic-pulse-style";
+        style.textContent = `
+          @keyframes pulse-mic {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+          }
+          .animate-pulse-mic {
+            animation: pulse-mic 1.2s infinite;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = "id-ID";
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      recognition.onresult = (event: any) => {
+        let interim = "";
+        let final = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) final += event.results[i][0].transcript;
+          else interim += event.results[i][0].transcript;
+        }
+        if (final) {
+          setText(prev => prev + (prev ? " " : "") + final);
+        }
+        setInterimTranscript(interim);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        setInterimTranscript("");
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+
+      return () => {
+        if (recognitionRef.current) recognitionRef.current.abort();
+      };
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchHistori() {
@@ -64,6 +141,27 @@ export default function DashboardPage() {
     }
     fetchHistori();
   }, [user]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isEmergencyMode) {
+        setIsEmergencyMode(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isEmergencyMode]);
+
+  useEffect(() => {
+    if (isEmergencyMode) {
+      handleGeolocation();
+      if (!isListening) {
+        recognitionRef.current?.start();
+        setIsListening(true);
+      }
+      setTimeout(() => emergencyTextareaRef.current?.focus(), 100);
+    }
+  }, [isEmergencyMode]);
 
   if (loadingAuth || !user) {
     return <LoadingScreen isVisible={true} />;
@@ -156,6 +254,7 @@ export default function DashboardPage() {
       const newEntry = { ...result, savedAt: new Date().toISOString(), id: docRef.id };
       await setDoc(docRef, newEntry);
       setHistori([newEntry, ...histori]);
+      if (!isPanelOpen) setHasNewHistory(true);
       toast("Berhasil disimpan ke histori", "success");
     } catch {
       toast("Gagal menyimpan histori", "error");
@@ -198,8 +297,8 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#f9fafb] flex-col lg:flex-row overflow-hidden font-sans text-[#111827]">
-      <aside className="hidden lg:flex flex-col w-[256px] bg-[#111827] text-[#9ca3af] flex-shrink-0 relative h-full">
+    <div className="flex h-screen bg-[#f9fafb] flex-col lg:flex-row overflow-x-hidden font-sans text-[#111827] gap-0">
+      <aside className="hidden lg:flex flex-col w-[256px] bg-[#111827] text-[#9ca3af] flex-shrink-0 relative h-full overflow-hidden border-none shrink-0 border-r-0">
         <div className="p-[20px_16px] border-b border-[#1f2937] flex items-center justify-between">
           <img src="/image/LOGO_WHITE.png" alt="SiJelih" className="h-[44px] w-auto" />
         </div>
@@ -213,6 +312,11 @@ export default function DashboardPage() {
           <button onClick={() => setActiveMenu("histori")} className={`flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] ${activeMenu === "histori" ? "bg-[#1d4ed8] text-white" : "hover:bg-[#1f2937] hover:text-white"}`}>
             <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
             <span>Histori</span>
+          </button>
+          
+          <button onClick={() => router.push("/dashboard/simulasi")} className={`flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] hover:bg-[#1f2937] hover:text-white`}>
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Simulasi</span>
           </button>
           
           <button onClick={() => router.push("/dashboard/massal")} className="flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] hover:bg-[#1f2937] hover:text-white">
@@ -243,11 +347,14 @@ export default function DashboardPage() {
         </div>
       </Dialog>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-[56px] bg-white border-b border-[#e5e7eb] px-[24px] flex items-center justify-between flex-shrink-0 z-10 transition-colors duration-150">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#f9fafb]">
+        <header className="h-[56px] min-h-[56px] bg-white border-b border-[#e5e7eb] px-[24px] flex items-center justify-between flex-shrink-0 z-10 transition-colors duration-150">
           <div className="text-[13px] text-[#6b7280]">
             Dashboard <span className="mx-1">/</span> <span className="capitalize">{activeMenu}</span>
           </div>
+          <button onClick={() => setIsEmergencyMode(!isEmergencyMode)} className={`${isEmergencyMode ? "bg-[#374151]" : "bg-[#dc2626] hover:bg-[#b91c1c]"} text-white text-[12px] font-[700] px-[14px] py-[6px] rounded-[6px] font-mono tracking-wider transition-colors`}>
+            {isEmergencyMode ? "KELUAR DARURAT" : "DARURAT"}
+          </button>
           <div className="flex items-center gap-3">
             <span className="text-[13px] font-[500] text-[#374151] hidden sm:block">{user.displayName}</span>
             <img src={user.photoURL || ""} alt="Avatar" className="w-[32px] h-[32px] rounded-full object-cover shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb]" />
@@ -272,9 +379,55 @@ export default function DashboardPage() {
                   
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[13px] font-[500] text-[#374151]">{activeTab === "text" ? "Teks Verifikasi" : "Unggah Gambar"}</label>
-                    {activeTab === "text" ? (
-                      <textarea value={text} onChange={(e) => setText(e.target.value)} className="w-full bg-white border border-[#d1d5db] rounded-[6px] p-[8px_12px] h-32 resize-none focus:outline-none focus:ring-[2px] focus:ring-[#3b82f6] focus:border-transparent transition-colors duration-150 text-[14px] placeholder-[#9ca3af]" placeholder="Paste informasi atau berita bencana yang ingin kamu verifikasi..." />
-                    ) : (
+                    {activeTab === "text" && (
+                      <div className="relative">
+                        <div className={`relative bg-white border rounded-[6px] transition-all duration-150 overflow-hidden ${isListening ? "border-[#fca5a5] ring-[2px] ring-[#fee2e2]" : "border-[#d1d5db] focus-within:ring-[2px] focus-within:ring-[#3b82f6] focus-within:border-transparent"}`}>
+                          <textarea 
+                            value={text} 
+                            onChange={(e) => setText(e.target.value)} 
+                            className="w-full bg-transparent p-[8px_12px] h-32 resize-none focus:outline-none transition-colors duration-150 text-[14px] placeholder-[#9ca3af] relative z-20 leading-[1.6]" 
+                            placeholder="Paste informasi atau berita bencana yang ingin kamu verifikasi..." 
+                          />
+                          {isListening && interimTranscript && (
+                            <div className="absolute top-0 left-0 w-full h-32 p-[8px_12px] text-[14px] pointer-events-none whitespace-pre-wrap leading-[1.6] z-10">
+                              <span className="text-transparent">{text}</span>
+                              <span className="text-[#9ca3af] italic">{interimTranscript}</span>
+                            </div>
+                          )}
+                          {isMicSupported && (
+                            <div className="absolute bottom-3 right-3 z-30">
+                              <div className="relative">
+                                {isListening && <div className="absolute inset-0 rounded-full border-[1.5px] border-[#fca5a5] animate-pulse-mic"></div>}
+                                <button 
+                                  onClick={() => {
+                                    if (isListening) {
+                                      recognitionRef.current?.stop();
+                                    } else {
+                                      recognitionRef.current?.start();
+                                      setIsListening(true);
+                                    }
+                                  }}
+                                  title={isListening ? "Klik untuk berhenti" : "Verifikasi dengan suara"}
+                                  className={`w-[32px] h-[32px] rounded-full border flex items-center justify-center cursor-pointer transition-colors relative z-10 ${isListening ? "bg-[#fee2e2] border-[#fecaca] hover:bg-[#fecaca]" : "bg-[#f3f4f6] border-[#e5e7eb] hover:bg-[#e5e7eb]"}`}
+                                >
+                                  <svg className={`w-[14px] h-[14px] ${isListening ? "text-[#dc2626]" : "text-[#6b7280]"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                    <line x1="12" x2="12" y1="19" y2="22"></line>
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {isListening && (
+                          <div className="absolute -bottom-5 left-0 text-[11px] font-mono text-[#dc2626] animate-pulse">
+                            Mendengarkan...
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {activeTab === "photo" && (
                       <div className="flex flex-col gap-3">
                         <input type="file" accept="image/*" capture="environment" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
                         {!imagePreview ? (
@@ -403,6 +556,12 @@ export default function DashboardPage() {
                       <div className="bg-white p-[16px_20px] rounded-[8px] border border-[#e5e7eb] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"><p className="text-[24px] font-[700] text-[#991b1b]">{histori.filter(i => i.verdict === "HOAKS").length}</p><p className="text-[12px] text-[#6b7280] mt-1 font-[500]">HOAKS</p></div>
                       <div className="bg-white p-[16px_20px] rounded-[8px] border border-[#e5e7eb] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"><p className="text-[24px] font-[700] text-[#854d0e]">{histori.filter(i => i.verdict === "BELUM_TERVERIFIKASI").length}</p><p className="text-[12px] text-[#6b7280] mt-1 font-[500]">BELUM TERVERIFIKASI</p></div>
                     </div>
+                    <div className="lg:hidden mt-4">
+                      <button onClick={() => { signOut(auth); router.push("/"); }} className="w-full bg-white border border-[#fecaca] rounded-[8px] p-[16px] flex items-center justify-between hover:bg-[#fff5f5] transition-colors group">
+                        <span className="text-[14px] font-[500] text-[#dc2626]">Keluar dari akun</span>
+                        <svg className="w-[16px] h-[16px] text-[#fca5a5] group-hover:text-[#dc2626] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m9 18 6-6-6-6"/></svg>
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
@@ -413,32 +572,147 @@ export default function DashboardPage() {
       </div>
       
       {activeMenu === "verifikasi" && (
-        <aside className="hidden lg:flex flex-col w-[280px] bg-white border-l border-[#e5e7eb] flex-shrink-0 h-full overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.05)] z-20">
-          <div className="p-[16px] border-b border-[#e5e7eb] flex items-center justify-between">
-            <span className="font-[500] text-[13px] text-[#374151]">Riwayat Terakhir</span>
-            <svg className="w-4 h-4 text-[#9ca3af]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v6h6"/></svg>
+        <aside className={`hidden lg:flex flex-col ${isPanelOpen ? "w-[280px]" : "w-[40px]"} bg-white border-l border-[#e5e7eb] flex-shrink-0 h-full overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.05)] z-20 transition-all duration-200 ease-in-out`}>
+          <div className={`p-[16px] border-b border-[#e5e7eb] flex items-center ${isPanelOpen ? "justify-between" : "justify-center"}`}>
+            {isPanelOpen && <span className="font-[500] text-[13px] text-[#374151]">Riwayat Terakhir</span>}
+            <button 
+              onClick={() => { setIsPanelOpen(!isPanelOpen); if (!isPanelOpen) setHasNewHistory(false); }} 
+              className="w-[28px] h-[28px] rounded-[6px] hover:bg-[#f3f4f6] flex items-center justify-center border border-[#e5e7eb] transition-colors relative"
+            >
+              <svg className="w-[12px] h-[12px] text-[#9ca3af]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                {isPanelOpen ? <path d="m9 18 6-6-6-6"/> : <path d="m15 18-6-6 6-6"/>}
+              </svg>
+              {!isPanelOpen && hasNewHistory && <div className="absolute top-0 right-0 w-[6px] h-[6px] bg-[#dc2626] rounded-full"></div>}
+            </button>
           </div>
-          <div className="flex-1 overflow-y-auto flex flex-col scrollbar-thin scrollbar-thumb-[#d1d5db]">
-            {loadingHistori ? (
-              <SkeletonDashboardPanel />
-            ) : histori.map(item => {
-              const txt = item.inputText || item.extractedText || "Verifikasi via foto";
-              return (
-                <div key={item.id} className="p-[12px_16px] border-b border-[#f3f4f6] hover:bg-[#f9fafb] transition-colors duration-150 flex flex-col gap-1.5 cursor-default">
-                  <div className="flex justify-between items-center">
-                    <span className={`px-[6px] py-[2px] rounded-[4px] text-[10px] font-[600] border ${getBadgeClass(item.verdict)}`}>{item.verdict}</span>
-                    <span className="text-[11px] text-[#9ca3af]">{getRelativeTime(item.savedAt)}</span>
+          {isPanelOpen && (
+            <div className="flex-1 overflow-y-auto flex flex-col scrollbar-thin scrollbar-thumb-[#d1d5db]">
+              {loadingHistori ? (
+                <SkeletonDashboardPanel />
+              ) : histori.map(item => {
+                const txt = item.inputText || item.extractedText || "Verifikasi via foto";
+                return (
+                  <div key={item.id} className="p-[12px_16px] border-b border-[#f3f4f6] hover:bg-[#f9fafb] transition-colors duration-150 flex flex-col gap-1.5 cursor-default">
+                    <div className="flex justify-between items-center">
+                      <span className={`px-[6px] py-[2px] rounded-[4px] text-[10px] font-[600] border ${getBadgeClass(item.verdict)}`}>{item.verdict}</span>
+                      <span className="text-[11px] text-[#9ca3af]">{getRelativeTime(item.savedAt)}</span>
+                    </div>
+                    <p className="text-[12px] text-[#374151] leading-tight line-clamp-2 mt-1">"{txt}"</p>
+                    <div className="items-center gap-2 mt-1 hidden sm:flex">
+                      <span className="text-[10px] text-[#6b7280] font-[500] whitespace-nowrap">AI Trust {item.confidence}%</span>
+                      <div className="flex-1 bg-[#f3f4f6] rounded-[4px] h-[4px]"><div className={`h-[4px] rounded-[4px] ${getProgressColor(item.verdict)} ${getProgressWidthClass(item.confidence)}`}></div></div>
+                    </div>
                   </div>
-                  <p className="text-[12px] text-[#374151] leading-tight line-clamp-2 mt-1">"{txt}"</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-[#6b7280] font-[500] whitespace-nowrap">AI Trust {item.confidence}%</span>
-                    <div className="flex-1 bg-[#f3f4f6] rounded-[4px] h-[4px]"><div className={`h-[4px] rounded-[4px] ${getProgressColor(item.verdict)} ${getProgressWidthClass(item.confidence)}`}></div></div>
+                );
+              })}
+            </div>
+          )}
+          {!isPanelOpen && (
+             <div className="flex-1 flex items-center justify-center">
+                <div className="h-full w-px bg-[#e5e7eb] absolute left-[19px] -z-10"></div>
+             </div>
+          )}
+        </aside>
+      )}
+
+      {isEmergencyMode && (
+        <div className="fixed inset-0 z-[9999] bg-[#0a0a0a] flex flex-col font-sans overflow-y-auto">
+          <header className="p-[16px_24px] flex justify-between items-center border-b border-[#1f1f1f] bg-[#0a0a0a] sticky top-0 z-10">
+            <div className="text-[13px] font-[700] font-mono text-[#dc2626] tracking-[0.05em]">MODE DARURAT</div>
+            <button onClick={() => setIsEmergencyMode(false)} className="bg-transparent border border-[#374151] text-[#9ca3af] hover:border-[#6b7280] hover:text-white text-[12px] px-[12px] py-[6px] rounded-[6px] transition-colors">Keluar dari Mode Darurat</button>
+          </header>
+
+          <div className="w-full max-w-[600px] mx-auto px-[24px] py-[32px] flex flex-col gap-[24px]">
+            <GempaAlert />
+            
+            <div className="flex flex-col gap-[16px]">
+              <h2 className="text-[16px] font-[600] text-white text-center">Paste atau ucapkan informasi bencana yang kamu terima</h2>
+              <div className="relative">
+                <textarea 
+                  ref={emergencyTextareaRef}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  className="w-full min-h-[160px] bg-[#111111] border-2 border-[#374151] rounded-[10px] p-[20px] text-[18px] text-white placeholder-[#4b5563] focus:border-[#dc2626] outline-none transition-colors resize-none relative z-10"
+                  placeholder="Ketik atau bicara..."
+                />
+                <div className="absolute bottom-3 right-3 z-30">
+                  <div className="relative">
+                    {isListening && <div className="absolute inset-0 rounded-full border-[2px] border-[#dc2626] animate-pulse-mic"></div>}
+                    <button 
+                      onClick={() => {
+                        if (isListening) recognitionRef.current?.stop();
+                        else { recognitionRef.current?.start(); setIsListening(true); }
+                      }}
+                      className={`w-[44px] h-[44px] rounded-full border flex items-center justify-center transition-colors relative z-10 ${isListening ? "bg-[#dc2626] border-[#dc2626]" : "bg-[#1f2937] border-[#374151]"}`}
+                    >
+                      <svg className="w-[18px] h-[18px] text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                    </button>
                   </div>
                 </div>
-              );
-            })}
+                {isListening && interimTranscript && (
+                  <div className="absolute top-0 left-0 w-full h-[160px] p-[20px] text-[18px] pointer-events-none whitespace-pre-wrap leading-tight z-0">
+                    <span className="text-transparent">{text}</span>
+                    <span className="text-[#9ca3af] italic">{interimTranscript}</span>
+                  </div>
+                )}
+              </div>
+              <input 
+                value={kodeWilayah}
+                onChange={(e) => setKodeWilayah(e.target.value)}
+                placeholder="Kode wilayah BMKG (opsional)"
+                className="w-full bg-[#111111] border border-[#374151] rounded-[8px] p-[14px] text-[15px] text-white placeholder-[#4b5563] focus:border-[#dc2626] outline-none transition-colors"
+                type="text"
+              />
+              <button 
+                onClick={async () => {
+                  setEmergencyLoading(true); setEmergencyResult(null);
+                  try {
+                    const res = await fetch("/api/verify", {
+                      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, kodeWilayah })
+                    });
+                    const data = await res.json();
+                    setEmergencyResult(data);
+                  } finally { setEmergencyLoading(false); }
+                }}
+                disabled={emergencyLoading || text.length < 5}
+                className="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white text-[18px] font-[700] p-[18px] rounded-[10px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg"
+              >
+                {emergencyLoading ? (
+                  <>
+                    <div className="w-[20px] h-[20px] border-[2px] border-white border-t-transparent rounded-full animate-spin"></div>
+                    Memverifikasi...
+                  </>
+                ) : "Verifikasi Sekarang"}
+              </button>
+            </div>
+
+            {emergencyResult && (
+              <div className="bg-[#111111] border border-[#1f1f1f] rounded-[10px] p-[20px] flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
+                <div className="flex justify-between items-center">
+                  <span className={`px-[12px] py-[4px] rounded-[6px] text-[16px] font-[700] border ${getBadgeClass(emergencyResult.verdict)}`}>{emergencyResult.verdict}</span>
+                  <span className="text-[14px] font-mono text-[#9ca3af]">{emergencyResult.confidence}% Confidence</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                   <h3 className="text-[12px] font-[700] text-[#4b5563] uppercase">Alasan</h3>
+                   <p className="text-[15px] text-white leading-relaxed">{emergencyResult.alasan}</p>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                   <h3 className="text-[12px] font-[700] text-[#4b5563] uppercase">Saran</h3>
+                   <p className="text-[15px] text-[#22c55e] font-[600] leading-relaxed">{emergencyResult.saran}</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    const text = `*[SiJelih DARURAT]*\nStatus: ${emergencyResult.verdict}\nKeyakinan: ${emergencyResult.confidence}%\n\nInformasi:\n"${emergencyResult.inputText}"\n\nAnalisis:\n${emergencyResult.alasan}\n\nSaran:\n${emergencyResult.saran}`;
+                    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+                  }}
+                  className="bg-[#25d366] hover:bg-[#1ebe57] text-white text-[16px] font-[700] p-[14px] rounded-[8px] transition-colors mt-[12px] w-full"
+                >
+                  Bagikan ke WhatsApp
+                </button>
+              </div>
+            )}
           </div>
-        </aside>
+        </div>
       )}
 
       <nav className="lg:hidden fixed bottom-0 w-full bg-white flex justify-around p-3 z-50 text-white pb-safe border-t border-[#e5e7eb] shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
@@ -448,11 +722,12 @@ export default function DashboardPage() {
         <button onClick={() => setActiveMenu("histori")} className={`p-3 rounded-[6px] transition-colors duration-150 ${activeMenu === "histori" ? "bg-[#1d4ed8] text-white" : "text-[#6b7280]"}`}>
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
         </button>
-        <button onClick={() => router.push("/dashboard/massal")} className="p-3 rounded-[6px] transition-colors duration-150 text-[#6b7280]">
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="M19 10v6"/><path d="M16 13h6"/></svg>
-        </button>
         <button onClick={() => setActiveMenu("profil")} className={`p-3 rounded-[6px] transition-colors duration-150 ${activeMenu === "profil" ? "bg-[#1d4ed8] text-white" : "text-[#6b7280]"}`}>
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </button>
+        <button onClick={() => { signOut(auth); router.push("/"); }} className="p-3 rounded-[6px] transition-colors duration-150 text-[#6b7280] flex flex-col items-center justify-center gap-0.5">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span className="text-[8px] font-bold">KELUAR</span>
         </button>
       </nav>
     </div>

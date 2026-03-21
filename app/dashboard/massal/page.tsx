@@ -136,13 +136,18 @@ export default function MassalPage() {
         <nav className="flex-1 flex flex-col gap-1 p-[12px] overflow-y-auto">
           <div className="text-[11px] font-[500] tracking-wider text-[#4b5563] uppercase px-[12px] mb-1 mt-2">Menu</div>
           
-          <button onClick={() => router.push("/dashboard")} className="flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] hover:bg-[#1f2937] hover:text-white">
+          <button onClick={() => router.push("/dashboard?menu=verifikasi")} className="flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] hover:bg-[#1f2937] hover:text-white">
             <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             <span>Verifikasi</span>
           </button>
-          <button onClick={() => router.push("/dashboard")} className="flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] hover:bg-[#1f2937] hover:text-white">
+          <button onClick={() => router.push("/dashboard?menu=histori")} className="flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] hover:bg-[#1f2937] hover:text-white">
             <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
             <span>Histori</span>
+          </button>
+          
+          <button onClick={() => router.push("/dashboard/simulasi")} className={`flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] hover:bg-[#1f2937] hover:text-white`}>
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Simulasi</span>
           </button>
           <button className="flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] bg-[#1d4ed8] text-white">
             <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="M19 10v6"/><path d="M16 13h6"/></svg>
@@ -151,7 +156,7 @@ export default function MassalPage() {
 
           <div className="text-[11px] font-[500] tracking-wider text-[#4b5563] uppercase px-[12px] mb-1 mt-6">Akun</div>
           
-          <button onClick={() => router.push("/dashboard")} className="flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] hover:bg-[#1f2937] hover:text-white">
+          <button onClick={() => router.push("/dashboard?menu=profil")} className="flex items-center gap-3 px-[12px] py-[8px] rounded-[6px] transition-colors duration-150 text-[13px] font-[500] hover:bg-[#1f2937] hover:text-white">
             <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             <span>Profil</span>
           </button>
@@ -316,16 +321,16 @@ export default function MassalPage() {
       </div>
 
       <nav className="lg:hidden fixed bottom-0 w-full bg-white flex justify-around p-3 z-50 pb-safe border-t border-[#e5e7eb] shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
-        <button onClick={() => router.push("/dashboard")} className="p-3 rounded-[6px] transition-colors duration-150 text-[#6b7280]">
+        <button onClick={() => router.push("/dashboard?menu=verifikasi")} className="p-3 rounded-[6px] transition-colors duration-150 text-[#6b7280]">
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </button>
-        <button onClick={() => router.push("/dashboard")} className="p-3 rounded-[6px] transition-colors duration-150 text-[#6b7280]">
+        <button onClick={() => router.push("/dashboard?menu=histori")} className="p-3 rounded-[6px] transition-colors duration-150 text-[#6b7280]">
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
         </button>
         <button className="p-3 rounded-[6px] transition-colors duration-150 bg-[#1d4ed8] text-white">
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="M19 10v6"/><path d="M16 13h6"/></svg>
         </button>
-        <button onClick={() => router.push("/dashboard")} className="p-3 rounded-[6px] transition-colors duration-150 text-[#6b7280]">
+        <button onClick={() => router.push("/dashboard?menu=profil")} className="p-3 rounded-[6px] transition-colors duration-150 text-[#6b7280]">
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
       </nav>

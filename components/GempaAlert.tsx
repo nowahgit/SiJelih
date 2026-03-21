@@ -38,16 +38,18 @@ export default function GempaAlert() {
     }
   }, [gempa, isDismissed, lastDismissedId]);
 
-  if (!gempa || isDismissed) return null;
-
-  const isTsunami = gempa.Potensi?.toLowerCase().includes("tsunami");
+  const isTsunami = gempa?.Potensi?.toLowerCase().includes("tsunami");
 
   return (
-    <div className="sticky top-0 w-full z-[100] flex items-center bg-[#7f1d1d] text-white text-[13px] py-[10px] px-[24px]">
+    <div className={`sticky top-0 w-full z-[100] flex items-center bg-[#7f1d1d] text-white text-[13px] px-[24px] transition-all duration-300 overflow-hidden ${(!gempa || isDismissed) ? "h-0 opacity-0 pointer-events-none" : "h-[38px] opacity-100"}`}>
       <div className="flex-1 pr-4 whitespace-normal font-medium">
-        PERINGATAN GEMPA BUMI — M{gempa.Magnitude} · {gempa.Wilayah} · {gempa.Tanggal}, {gempa.Jam} WIB · Kedalaman {gempa.Kedalaman}
-        {isTsunami && (
-          <span className="ml-2 bg-[#991b1b] px-2 py-0.5 whitespace-nowrap">· BERPOTENSI TSUNAMI</span>
+        {gempa && (
+          <>
+            PERINGATAN GEMPA BUMI — M{gempa.Magnitude} · {gempa.Wilayah} · {gempa.Tanggal}, {gempa.Jam} WIB · Kedalaman {gempa.Kedalaman}
+            {isTsunami && (
+              <span className="ml-2 bg-[#991b1b] px-2 py-0.5 whitespace-nowrap">· BERPOTENSI TSUNAMI</span>
+            )}
+          </>
         )}
       </div>
       <button 
