@@ -1,8 +1,16 @@
 "use client";
+import { useEffect, useState } from "react";
 
 export default function TickerBar() {
+  const [mounted, setMounted] = useState(false);
   const tickerText = "BMKG: Gempa M4.2 Maluku Utara · Peringatan Dini Hujan Lebat Jawa Barat · Gempa M3.8 Bengkulu · Peringatan Banjir Bandang Kalimantan Selatan · Gempa M5.1 Sulawesi Tengah · Peringatan Angin Kencang NTT";
   
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return <div className="w-full h-[36px] bg-[#fafafa] border-b border-[#e5e7eb]"></div>;
+
   return (
     <div className="w-full h-[36px] bg-[#fafafa] border-b border-[#e5e7eb] overflow-hidden flex relative">
       <div className="z-10 bg-[#0a0a0a] text-white px-[12px] h-full flex items-center flex-shrink-0 font-mono text-[10px] font-[700]">
