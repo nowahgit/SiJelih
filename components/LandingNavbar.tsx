@@ -77,6 +77,7 @@ export default function LandingNavbar() {
                   <img 
                     src={user.photoURL || ""} 
                     alt="Avatar" 
+                    referrerPolicy="no-referrer"
                     className="w-[32px] h-[32px] rounded-full object-cover border border-[#e5e7eb]" 
                   />
                 </div>
@@ -133,7 +134,7 @@ export default function LandingNavbar() {
               ) : (
                 <>
                   <div className="px-[24px] py-[20px] border-b border-[#f3f4f6] flex items-center gap-[14px] bg-[#f9fafb]">
-                    <img src={user.photoURL || ""} alt="Avatar" className="w-[44px] h-[44px] rounded-full object-cover border border-[#e5e7eb] shadow-sm" />
+                    <img src={user.photoURL || ""} alt="Avatar" referrerPolicy="no-referrer" className="w-[44px] h-[44px] rounded-full object-cover border border-[#e5e7eb] shadow-sm" />
                     <div className="flex flex-col min-w-0">
                       <span className="text-[15px] font-[700] text-[#0a0a0a] truncate">{user.displayName}</span>
                       <span className="text-[12px] text-[#6b7280] truncate">{user.email}</span>

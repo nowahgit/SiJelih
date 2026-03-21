@@ -80,6 +80,16 @@ export default function DashboardPage() {
         `;
         document.head.appendChild(style);
       }
+      if (!document.getElementById("safe-area-style")) {
+        const style = document.createElement("style");
+        style.id = "safe-area-style";
+        style.textContent = `
+          .bottom-nav-safe-padding {
+            padding-bottom: env(safe-area-inset-bottom);
+          }
+        `;
+        document.head.appendChild(style);
+      }
       const recognition = new SpeechRecognition();
       recognition.lang = "id-ID";
       recognition.continuous = false;
@@ -328,37 +338,37 @@ export default function DashboardPage() {
 
       <div className="flex-1 flex flex-col min-w-0 bg-[#f9fafb]">
         <header className="h-[56px] min-h-[56px] bg-white border-b border-[#e5e7eb] px-[24px] flex items-center justify-between flex-shrink-0 z-10 transition-colors duration-150">
-          <div className="text-[13px] text-[#6b7280]">
+          <div className="hidden lg:flex text-[13px] text-[#6b7280]">
             Dashboard <span className="mx-1">/</span> <span className="capitalize">{activeMenu}</span>
           </div>
-          <button onClick={() => setIsEmergencyMode(!isEmergencyMode)} className={`${isEmergencyMode ? "bg-[#374151]" : "bg-[#dc2626] hover:bg-[#b91c1c]"} text-white text-[12px] font-[700] px-[14px] py-[6px] rounded-[6px] font-mono tracking-wider transition-colors`}>
+          <button onClick={() => setIsEmergencyMode(!isEmergencyMode)} className={`${isEmergencyMode ? "bg-[#374151]" : "bg-[#dc2626] hover:bg-[#b91c1c]"} text-white text-[11px] lg:text-[12px] font-[700] px-3 py-1.5 lg:px-[14px] lg:py-[6px] rounded-[6px] font-mono tracking-wider transition-colors`}>
             {isEmergencyMode ? "KELUAR DARURAT" : "DARURAT"}
           </button>
           <div className="flex items-center gap-3">
             <span className="text-[13px] font-[500] text-[#374151] hidden sm:block">{user.displayName}</span>
-            <img src={user.photoURL || ""} alt="Avatar" className="w-[32px] h-[32px] rounded-full object-cover shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb]" />
+            <img src={user.photoURL || ""} alt="Avatar" referrerPolicy="no-referrer" className="w-[32px] h-[32px] rounded-full object-cover shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb]" />
           </div>
         </header>
 
-        <main className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 flex flex-col min-w-0 overflow-y-auto scroll-smooth">
           <PageTransition>
             {activeMenu === "verifikasi" && <GempaAlert />}
-            <div className="p-[24px] flex flex-col w-full max-w-5xl mx-auto pb-24 lg:pb-8">
+            <div className="p-4 lg:p-[24px] flex flex-col w-full max-w-5xl mx-auto pb-28 lg:pb-8">
 
               {activeMenu === "verifikasi" && (
-                <div className="flex flex-col gap-6 w-full">
-                  <div className="bg-white p-[20px] rounded-[8px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb] flex flex-col gap-5">
-                    <h1 className="text-[18px] font-[600] text-[#111827]">Verifikasi Informasi</h1>
+                <div className="flex flex-col gap-4 lg:gap-6 w-full">
+                  <div className="bg-white p-4 lg:p-[20px] rounded-[8px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb] flex flex-col gap-5">
+                    <h1 className="text-[18px] font-[600] text-[#111827] mb-4">Verifikasi Informasi</h1>
                     <div className="flex border-b border-[#e5e7eb] gap-4">
-                      <button onClick={() => setActiveTab("text")} className={`pb-2 text-[13px] font-[500] transition-colors duration-150 ${activeTab === "text" ? "border-b-2 border-[#1d4ed8] text-[#1d4ed8]" : "text-[#6b7280] hover:text-[#374151]"}`}>Pesan Teks</button>
-                      <button onClick={() => setActiveTab("photo")} className={`pb-2 text-[13px] font-[500] transition-colors duration-150 ${activeTab === "photo" ? "border-b-2 border-[#1d4ed8] text-[#1d4ed8]" : "text-[#6b7280] hover:text-[#374151]"}`}>Gambar & Foto</button>
+                      <button onClick={() => setActiveTab("text")} className={`py-2 px-3 lg:pb-2 lg:px-0 text-[13px] font-[500] transition-colors duration-150 ${activeTab === "text" ? "border-b-2 border-[#1d4ed8] text-[#1d4ed8]" : "text-[#6b7280] hover:text-[#374151]"}`}>Pesan Teks</button>
+                      <button onClick={() => setActiveTab("photo")} className={`py-2 px-3 lg:pb-2 lg:px-0 text-[13px] font-[500] transition-colors duration-150 ${activeTab === "photo" ? "border-b-2 border-[#1d4ed8] text-[#1d4ed8]" : "text-[#6b7280] hover:text-[#374151]"}`}>Gambar & Foto</button>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[13px] font-[500] text-[#374151]">{activeTab === "text" ? "Teks Verifikasi" : "Unggah Gambar"}</label>
                       {activeTab === "text" && (
                         <div className="relative">
                           <div className={`relative bg-white border rounded-[6px] transition-all duration-150 overflow-hidden ${isListening ? "border-[#fca5a5] ring-[2px] ring-[#fee2e2]" : "border-[#d1d5db] focus-within:ring-[2px] focus-within:ring-[#3b82f6] focus-within:border-transparent"}`}>
-                            <textarea value={text} onChange={(e) => setText(e.target.value)} className="w-full bg-transparent p-[8px_12px] h-32 resize-none focus:outline-none transition-colors duration-150 text-[14px] placeholder-[#9ca3af] relative z-20 leading-[1.6]" placeholder="Paste informasi atau berita bencana yang ingin kamu verifikasi..." />
+                            <textarea value={text} onChange={(e) => setText(e.target.value)} className="w-full bg-transparent p-[8px_12px] h-40 lg:h-32 resize-none focus:outline-none transition-colors duration-150 text-[14px] placeholder-[#9ca3af] relative z-20 leading-[1.6]" placeholder="Paste informasi atau berita bencana yang ingin kamu verifikasi..." />
                             {isListening && interimTranscript && (
                               <div className="absolute top-0 left-0 w-full h-32 p-[8px_12px] text-[14px] pointer-events-none whitespace-pre-wrap leading-[1.6] z-10">
                                 <span className="text-transparent">{text}</span>
@@ -399,12 +409,12 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[13px] font-[500] text-[#374151]">Kode Wilayah Administratif</label>
-                      <input value={kodeWilayah} onChange={(e) => setKodeWilayah(e.target.value)} type="text" className="w-full bg-white border border-[#d1d5db] rounded-[6px] p-[8px_12px] focus:outline-none focus:ring-[2px] focus:ring-[#3b82f6] focus:border-transparent transition-colors duration-150 text-[14px] placeholder-[#9ca3af]" placeholder="Opsional (contoh: 33.72.01.1001)" />
+                      <input value={kodeWilayah} onChange={(e) => setKodeWilayah(e.target.value)} type="text" className="w-full bg-white border border-[#d1d5db] rounded-[6px] p-[8px_12px] h-11 lg:h-auto focus:outline-none focus:ring-[2px] focus:ring-[#3b82f6] focus:border-transparent transition-colors duration-150 text-[14px] placeholder-[#9ca3af]" placeholder="Opsional (contoh: 33.72.01.1001)" />
                     </div>
                     <div className="flex flex-col gap-2 mt-2">
                       <div className="bg-white border border-[#d1d5db] rounded-[6px] p-[16px] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <span className="text-[13px] font-[500] text-[#374151]">Cek status bahaya di lokasi saya sekarang</span>
-                        <button onClick={handleGeolocation} disabled={geoLoading} className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb] px-[16px] py-[8px] rounded-[6px] font-[500] text-[14px] transition-colors duration-150 disabled:opacity-50 whitespace-nowrap shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                        <button onClick={handleGeolocation} disabled={geoLoading} className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb] px-[16px] py-[8px] rounded-[6px] font-[500] text-[14px] transition-colors duration-150 disabled:opacity-50 whitespace-nowrap shadow-[0_1px_2px_rgba(0,0,0,0.05)] w-full md:w-auto">
                           {geoLoading ? "Mendeteksi lokasi..." : "Gunakan Lokasi Saya"}
                         </button>
                       </div>
@@ -418,7 +428,7 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <div className="flex justify-start md:justify-end mt-2 pt-5 border-t border-[#e5e7eb]">
-                      <button onClick={handleVerify} disabled={loading || (activeTab === "text" ? text.length < 10 : !imageFile)} className="bg-[#1d4ed8] hover:bg-[#1e40af] disabled:bg-[#d1d5db] disabled:hover:bg-[#d1d5db] text-white px-[16px] py-[8px] rounded-[6px] font-[500] text-[14px] transition-colors duration-150 flex items-center justify-center min-w-[200px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] disabled:opacity-75 disabled:cursor-not-allowed">
+                      <button onClick={handleVerify} disabled={loading || (activeTab === "text" ? text.length < 10 : !imageFile)} className="bg-[#1d4ed8] hover:bg-[#1e40af] disabled:bg-[#d1d5db] disabled:hover:bg-[#d1d5db] text-white px-[16px] py-3 lg:py-[8px] rounded-[6px] font-[500] text-[14px] transition-colors duration-150 flex items-center justify-center w-full lg:min-w-[200px] lg:w-auto shadow-[0_1px_2px_rgba(0,0,0,0.05)] disabled:opacity-75 disabled:cursor-not-allowed">
                         {loading ? (
                           <div className="flex items-center gap-2">
                             <div className="w-[14px] h-[14px] border-[1.5px] border-white border-t-transparent rounded-full animate-spin"></div>
@@ -442,7 +452,7 @@ export default function DashboardPage() {
                           {extractedTextOpen && <div className="mt-3 text-[13px] text-[#4b5563] border-t border-[#e5e7eb] pt-3 whitespace-pre-wrap leading-relaxed">{result.extractedText}</div>}
                         </div>
                       )}
-                      <button onClick={handleSaveHistori} disabled={savingObj} className="bg-white flex justify-center border border-[#d1d5db] hover:bg-[#f9fafb] text-[#374151] px-[16px] py-[8px] rounded-[6px] font-[500] text-[14px] transition-colors duration-150 shadow-[0_1px_2px_rgba(0,0,0,0.05)] w-full disabled:opacity-75 disabled:cursor-not-allowed">
+                      <button onClick={handleSaveHistori} disabled={savingObj} className="bg-white flex justify-center border border-[#d1d5db] hover:bg-[#f9fafb] text-[#374151] px-[16px] py-3 lg:py-[8px] rounded-[6px] font-[500] text-[14px] transition-colors duration-150 shadow-[0_1px_2px_rgba(0,0,0,0.05)] w-full disabled:opacity-75 disabled:cursor-not-allowed">
                         {savingObj ? (
                           <div className="flex items-center gap-2">
                             <div className="w-[14px] h-[14px] border-[1.5px] border-current border-t-transparent rounded-full animate-spin"></div>
@@ -456,20 +466,20 @@ export default function DashboardPage() {
               )}
 
               {activeMenu === "histori" && (
-                <div className="flex flex-col gap-6 w-full">
-                  <h1 className="text-[18px] font-[600] text-[#111827]">Histori Verifikasi</h1>
+                <div className="flex flex-col gap-4 lg:gap-6 w-full">
+                  <h1 className="text-[18px] font-[600] text-[#111827] mb-4">Histori Verifikasi</h1>
                   {loadingHistori ? (
                     <div className="flex flex-col gap-4">{[1, 2, 3].map((i) => <SkeletonCard key={i} />)}</div>
                   ) : histori.length === 0 ? (
                     <div className="bg-white p-[32px] rounded-[8px] border border-[#e5e7eb] text-center text-[#6b7280] text-[13px] font-[500] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Belum ada riwayat verifikasi</div>
                   ) : (
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-3 lg:gap-4">
                       {histori.map((item) => {
                         const txt = item.inputText || item.extractedText || "Verifikasi via foto";
                         return (
-                          <div key={item.id} className="bg-white p-[20px] rounded-[8px] border border-[#e5e7eb] shadow-[0_1px_2px_rgba(0,0,0,0.05)] flex flex-col gap-3">
+                          <div key={item.id} className="bg-white p-4 lg:p-[20px] rounded-[8px] border border-[#e5e7eb] shadow-[0_1px_2px_rgba(0,0,0,0.05)] flex flex-col gap-3 active:scale-[0.99] transition-transform duration-75">
                             <div className="flex justify-between items-start">
-                              <span className={`px-[8px] py-[2px] rounded-[4px] text-[11px] font-[600] border ${getBadgeClass(item.verdict)}`}>{item.verdict}</span>
+                              <span className={`px-[8px] py-[2px] rounded-[4px] text-xs lg:text-[11px] font-[600] border overflow-hidden text-ellipsis max-w-[160px] ${getBadgeClass(item.verdict)}`}>{item.verdict}</span>
                               <span className="text-[12px] text-[#6b7280]">{new Date(item.savedAt).toLocaleString("id-ID")}</span>
                             </div>
                             <p className="text-[14px] text-[#374151] italic leading-relaxed">"{txt.length > 120 ? txt.substring(0, 120) + "..." : txt}"</p>
@@ -487,14 +497,14 @@ export default function DashboardPage() {
               )}
 
               {activeMenu === "profil" && (
-                <div className="flex flex-col gap-6 w-full">
-                  <h1 className="text-[18px] font-[600] text-[#111827]">Profil & Statistik Akun</h1>
+                <div className="flex flex-col gap-4 lg:gap-6 w-full">
+                  <h1 className="text-[18px] font-[600] text-[#111827] mb-4">Profil & Statistik Akun</h1>
                   {loadingHistori ? (
                     <SkeletonProfile />
                   ) : (
                     <>
                       <div className="bg-white p-[20px] rounded-[8px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb] flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-                        <img src={user.photoURL || ""} alt="Avatar" className="w-[80px] h-[80px] rounded-full bg-[#f3f4f6] object-cover border border-[#e5e7eb]" />
+                        <img src={user.photoURL || ""} alt="Avatar" referrerPolicy="no-referrer" className="w-[80px] h-[80px] rounded-full bg-[#f3f4f6] object-cover border border-[#e5e7eb]" />
                         <div className="flex flex-col gap-1 items-center sm:items-start flex-1 w-full justify-center h-full pt-2">
                           <h2 className="text-[16px] font-[600] text-[#111827]">{user.displayName}</h2>
                           <p className="text-[#6b7280] text-[13px]">{user.email}</p>
@@ -542,7 +552,7 @@ export default function DashboardPage() {
                 return (
                   <div key={item.id} className="p-[12px_16px] border-b border-[#f3f4f6] hover:bg-[#f9fafb] transition-colors duration-150 flex flex-col gap-1.5 cursor-default">
                     <div className="flex justify-between items-center">
-                      <span className={`px-[6px] py-[2px] rounded-[4px] text-[10px] font-[600] border ${getBadgeClass(item.verdict)}`}>{item.verdict}</span>
+                      <span className={`px-[6px] py-[2px] rounded-[4px] text-xs lg:text-[10px] font-[600] border overflow-hidden text-ellipsis max-w-[160px] ${getBadgeClass(item.verdict)}`}>{item.verdict}</span>
                       <span className="text-[11px] text-[#9ca3af]">{getRelativeTime(item.savedAt)}</span>
                     </div>
                     <p className="text-[12px] text-[#374151] leading-tight line-clamp-2 mt-1">"{txt}"</p>
@@ -623,19 +633,21 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <nav className="lg:hidden fixed bottom-0 w-full bg-white flex justify-around p-3 z-50 border-t border-[#e5e7eb] shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
-        <button onClick={() => setActiveMenu("verifikasi")} className={`p-3 rounded-[6px] transition-colors duration-150 ${activeMenu === "verifikasi" ? "bg-[#1d4ed8] text-white" : "text-[#6b7280]"}`}>
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-white border-t border-[#e5e7eb] flex items-center justify-around z-[100] bottom-nav-safe-padding">
+        <button onClick={() => setActiveMenu("verifikasi")} className="relative w-1/3 h-full flex flex-col items-center justify-center gap-1 transition-colors duration-200">
+          {activeMenu === "verifikasi" && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-[3px] bg-[#1d4ed8] rounded-b-[2px]"></div>}
+          <svg className={`w-5 h-5 transition-colors duration-200 ${activeMenu === "verifikasi" ? "text-[#1d4ed8]" : "text-[#6b7280]"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span className={`text-[11px] font-[600] transition-colors duration-200 ${activeMenu === "verifikasi" ? "text-[#1d4ed8]" : "text-[#6b7280]"}`}>Cek</span>
         </button>
-        <button onClick={() => setActiveMenu("histori")} className={`p-3 rounded-[6px] transition-colors duration-150 ${activeMenu === "histori" ? "bg-[#1d4ed8] text-white" : "text-[#6b7280]"}`}>
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+        <button onClick={() => setActiveMenu("histori")} className="relative w-1/3 h-full flex flex-col items-center justify-center gap-1 transition-colors duration-200">
+          {activeMenu === "histori" && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-[3px] bg-[#1d4ed8] rounded-b-[2px]"></div>}
+          <svg className={`w-5 h-5 transition-colors duration-200 ${activeMenu === "histori" ? "text-[#1d4ed8]" : "text-[#6b7280]"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+          <span className={`text-[11px] font-[600] transition-colors duration-200 ${activeMenu === "histori" ? "text-[#1d4ed8]" : "text-[#6b7280]"}`}>Histori</span>
         </button>
-        <button onClick={() => setActiveMenu("profil")} className={`p-3 rounded-[6px] transition-colors duration-150 ${activeMenu === "profil" ? "bg-[#1d4ed8] text-white" : "text-[#6b7280]"}`}>
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </button>
-        <button onClick={() => { signOut(auth); router.push("/"); }} className="p-3 rounded-[6px] transition-colors duration-150 text-[#6b7280] flex flex-col items-center justify-center gap-0.5">
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          <span className="text-[8px] font-bold">KELUAR</span>
+        <button onClick={() => setActiveMenu("profil")} className="relative w-1/3 h-full flex flex-col items-center justify-center gap-1 transition-colors duration-200">
+          {activeMenu === "profil" && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-[3px] bg-[#1d4ed8] rounded-b-[2px]"></div>}
+          <svg className={`w-5 h-5 transition-colors duration-200 ${activeMenu === "profil" ? "text-[#1d4ed8]" : "text-[#6b7280]"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span className={`text-[11px] font-[600] transition-colors duration-200 ${activeMenu === "profil" ? "text-[#1d4ed8]" : "text-[#6b7280]"}`}>Profil</span>
         </button>
       </nav>
     </div>
