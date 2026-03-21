@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import TypewriterInput from "@/components/TypewriterInput";
 import TickerBar from "@/components/TickerBar";
 import LandingNavbar from "@/components/LandingNavbar";
@@ -9,6 +10,7 @@ const nunito = Nunito({ subsets: ["latin"], weight: ["400", "500", "600", "700",
 
 export default function LandingPage() {
   return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
     <div className={`min-h-screen bg-white text-[#0a0a0a] ${nunito.className}`}>
       <LandingNavbar />
 
@@ -345,5 +347,6 @@ export default function LandingPage() {
         </div>
       </footer>
     </div>
+    </Suspense>
   );
 }
