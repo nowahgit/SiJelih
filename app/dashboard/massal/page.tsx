@@ -1,9 +1,10 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -12,7 +13,6 @@ import { useToast } from "@/hooks/useToast";
 import PageTransition from "@/components/PageTransition";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
 
-export const dynamic = "force-dynamic";
 
 export default function MassalPage() {
   const [user, loadingAuth] = useAuthState(auth);
@@ -129,6 +129,7 @@ export default function MassalPage() {
   };
 
   return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f9fafb]" />}>
     <div className="flex h-screen bg-[#f9fafb] flex-col lg:flex-row overflow-hidden font-sans text-[#111827]">
       
       <aside className="hidden lg:flex flex-col w-[256px] bg-[#111827] text-[#9ca3af] flex-shrink-0 relative h-full">
@@ -357,5 +358,6 @@ export default function MassalPage() {
         </div>
       )}
     </div>
+    </Suspense>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import VerifyCard from "@/components/VerifyCard";
 import GempaAlert from "@/components/GempaAlert";
@@ -19,7 +20,7 @@ import { SkeletonVerifyResult } from "@/components/ui/SkeletonVerifyResult";
 import { SkeletonDashboardPanel } from "@/components/ui/SkeletonDashboardPanel";
 import { SkeletonProfile } from "@/components/ui/SkeletonProfile";
 
-export const dynamic = "force-dynamic";
+
 
 export default function DashboardPage() {
   const [user, loadingAuth] = useAuthState(auth);
@@ -299,6 +300,7 @@ export default function DashboardPage() {
   };
 
   return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f9fafb]" />}>
     <div className="flex h-screen bg-[#f9fafb] flex-col lg:flex-row overflow-x-hidden font-sans text-[#111827] gap-0">
       <aside className="hidden lg:flex flex-col w-[256px] bg-[#111827] text-[#9ca3af] flex-shrink-0 relative h-full overflow-hidden border-none shrink-0 border-r-0">
         <div className="p-[20px_16px] border-b border-[#1f2937] flex items-center justify-between">
@@ -733,5 +735,6 @@ export default function DashboardPage() {
         </button>
       </nav>
     </div>
+    </Suspense>
   );
 }

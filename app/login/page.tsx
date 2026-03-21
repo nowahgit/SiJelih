@@ -1,10 +1,11 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import LoadingScreen from "@/components/LoadingScreen";
 
 export default function LoginPage() {
@@ -33,6 +34,7 @@ export default function LoginPage() {
   }
 
   return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f9fafb]" />}>
     <>
       <LoadingScreen isVisible={loading || Boolean(user)} />
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f9fafb] p-4">
@@ -68,5 +70,6 @@ export default function LoginPage() {
         </div>
       </div>
     </>
+    </Suspense>
   );
 }

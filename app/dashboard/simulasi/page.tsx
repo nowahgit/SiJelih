@@ -1,15 +1,15 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { signOut } from "firebase/auth";
 import LoadingScreen from "@/components/LoadingScreen";
 import PageTransition from "@/components/PageTransition";
 import Dialog from "@/components/Dialog";
 
-export const dynamic = "force-dynamic";
 
 export default function SimulasiPage() {
   const [user, loadingAuth] = useAuthState(auth);
@@ -129,6 +129,7 @@ export default function SimulasiPage() {
   );
 
   return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f9fafb]" />}>
     <div className="flex h-screen bg-[#f9fafb] flex-col lg:flex-row overflow-hidden font-sans text-[#111827]">
       <Sidebar />
       <Dialog isOpen={logoutConfirmCtx} onClose={() => setLogoutConfirmCtx(false)} title="Konfirmasi Keluar" size="sm">
@@ -274,5 +275,6 @@ export default function SimulasiPage() {
         </button>
       </nav>
     </div>
+    </Suspense>
   );
 }
