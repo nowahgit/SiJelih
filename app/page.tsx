@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import BencanaSectionWrapper from "@/components/BencanaSectionWrapper";
 import TypewriterInput from "@/components/TypewriterInput";
 import TickerBar from "@/components/TickerBar";
 import LandingNavbar from "@/components/LandingNavbar";
@@ -36,7 +37,7 @@ export default function LandingPage() {
               Verifikasi informasi bencana alam dalam hitungan detik menggunakan tiga sumber data resmi BMKG.
             </p>
 
-            <div className="w-full md:[&>div]:!max-w-full md:[&>div]:!mx-0 [&>div]:mx-auto">
+            <div className="w-full md:[&>div]:!max-w-full md:[&>div]:!mx-0 [&>div]:mx-auto min-h-[52px] h-[52px] overflow-hidden">
               <TypewriterInput />
             </div>
             
@@ -320,6 +321,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <BencanaSectionWrapper />
 
       <section className="bg-[#0a0a0a] py-[100px] px-[24px] text-center">
         <h2 className="font-[800] text-[40px] tracking-[-0.02em] text-white">
