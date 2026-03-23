@@ -12,7 +12,7 @@ const nunito = Nunito({ subsets: ["latin"], weight: ["400", "500", "600", "700",
 export default function LandingPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-white" />}>
-    <div className={`min-h-screen bg-white text-[#0a0a0a] ${nunito.className}`}>
+    <div className={`min-h-screen w-full overflow-x-hidden bg-white text-[#0a0a0a] ${nunito.className}`}>
       <LandingNavbar />
 
       <PageTransition>
@@ -37,7 +37,7 @@ export default function LandingPage() {
               Verifikasi informasi bencana alam dalam hitungan detik menggunakan tiga sumber data resmi BMKG.
             </p>
 
-            <div className="w-full md:[&>div]:!max-w-full md:[&>div]:!mx-0 [&>div]:mx-auto min-h-[52px] h-[52px] overflow-hidden">
+            <div className="w-full h-[52px] overflow-hidden">
               <TypewriterInput />
             </div>
             
@@ -238,8 +238,8 @@ export default function LandingPage() {
               SiJelih vs cara lama.
             </h2>
             
-            <div className="w-full relative">
-              <div className="grid grid-cols-[1fr_repeat(2,120px)] md:grid-cols-[1fr_repeat(2,140px)] items-stretch">
+            <div className="w-full relative overflow-x-auto pb-4 scrollbar-hide">
+              <div className="min-w-[450px] grid grid-cols-[1fr_repeat(2,100px)] md:grid-cols-[1fr_repeat(2,140px)] items-stretch">
                 <div className="p-[20px_0] border-b border-[#f3f4f6]"></div>
                 <div className="relative bg-[#f0f7ff]/50 border-x border-[#dbeafe] border-t border-[#dbeafe] rounded-t-[12px] p-[24px_16px] flex flex-col items-center justify-end">
                   <div className="absolute top-0 -translate-y-1/2 bg-[#2563eb] text-white text-[10px] font-[800] tracking-wider px-[10px] py-[3px] rounded-full uppercase shadow-sm">Terjeli</div>

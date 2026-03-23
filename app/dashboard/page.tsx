@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import VerifyCard from "@/components/VerifyCard";
 import GempaAlert from "@/components/GempaAlert";
+import DisasterMap from "@/components/DisasterMap";
 import { collection, doc, setDoc, query, orderBy, getDocs } from "firebase/firestore";
 import { getLatestBMKGData } from "@/lib/bmkg";
 import { signOut } from "firebase/auth";
@@ -468,6 +469,9 @@ export default function DashboardPage() {
               {activeMenu === "histori" && (
                 <div className="flex flex-col gap-4 lg:gap-6 w-full">
                   <h1 className="text-[18px] font-[600] text-[#111827] mb-4">Histori Verifikasi</h1>
+                  <div className="mb-6 border-b border-[#e5e7eb] pb-8">
+                    <DisasterMap height={300} mapId="disaster-map-dashboard" />
+                  </div>
                   {loadingHistori ? (
                     <div className="flex flex-col gap-4">{[1, 2, 3].map((i) => <SkeletonCard key={i} />)}</div>
                   ) : histori.length === 0 ? (

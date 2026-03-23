@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { getLatestBMKGData, getEarlyWarnings, getWeatherForecast } from "@/lib/bmkg";
+import DisasterMap from "./DisasterMap";
 
 export default function BencanaSection() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -11,14 +12,23 @@ export default function BencanaSection() {
   const [warnings, setWarnings] = useState<any[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [carouselLoading, setCarouselLoading] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
+  const [transitionEnabled, setTransitionEnabled] = useState(true);
 
   const carouselTimer = useRef<NodeJS.Timeout | null>(null);
+  const touchStartX = useRef<number | null>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  const infiniteWarnings = warnings.length > 0 ? [...warnings, ...warnings, ...warnings] : [];
 
   useEffect(() => {
     const fetchInitial = async () => {
       setCarouselLoading(true);
       const w = await getEarlyWarnings();
-      setWarnings(w || []);
+      if (w && w.length > 0) {
+        setWarnings(w);
+        setActiveIndex(w.length);
+      }
       setCarouselLoading(false);
     };
     fetchInitial();
@@ -27,13 +37,42 @@ export default function BencanaSection() {
   useEffect(() => {
     if (warnings.length > 0) {
       carouselTimer.current = setInterval(() => {
-        setActiveIndex((prev) => (prev + 1) % warnings.length);
+        if (!isPaused) {
+          handleNext();
+        }
       }, 4000);
     }
     return () => {
       if (carouselTimer.current) clearInterval(carouselTimer.current);
     };
-  }, [warnings]);
+  }, [warnings, isPaused, activeIndex]);
+
+  const handleNext = () => {
+    setActiveIndex((prev) => prev + 1);
+  };
+
+  const handlePrev = () => {
+    setActiveIndex((prev) => prev - 1);
+  };
+
+  useEffect(() => {
+    const n = warnings.length;
+    if (n === 0) return;
+
+    if (activeIndex >= n * 2) {
+      setTimeout(() => {
+        setTransitionEnabled(false);
+        setActiveIndex(activeIndex - n);
+        setTimeout(() => setTransitionEnabled(true), 10);
+      }, 300);
+    } else if (activeIndex < n) {
+      setTimeout(() => {
+        setTransitionEnabled(false);
+        setActiveIndex(activeIndex + n);
+        setTimeout(() => setTransitionEnabled(true), 10);
+      }, 300);
+    }
+  }, [activeIndex, warnings.length]);
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -78,23 +117,18 @@ export default function BencanaSection() {
     }
   };
 
-  const getVisibleItems = () => {
-    if (warnings.length === 0) return [];
-    const len = warnings.length;
-    const prev = (activeIndex - 1 + len) % len;
-    const next = (activeIndex + 1) % len;
-    return [
-      { item: warnings[prev], index: prev },
-      { item: warnings[activeIndex], index: activeIndex },
-      { item: warnings[next], index: next }
-    ];
-  };
 
   return (
     <section id="bencana" className="w-full bg-white border-t border-[#f3f4f6] px-6 py-[96px]">
       <div className="max-w-[1100px] mx-auto">
         <span className="block text-[11px] font-[600] tracking-[0.08em] text-[#9ca3af] font-mono mb-[12px]">PANTAU WILAYAH</span>
         <h2 className="text-[34px] font-[800] tracking-[-0.02em] text-[#0a0a0a] mb-[48px]">Cek kondisi bencana di wilayahmu.</h2>
+
+        <div className="mb-10">
+          <DisasterMap height={380} />
+        </div>
+
+        <div className="border-t border-[#f3f4f6] my-10"></div>
         
         <div className="flex flex-col lg:flex-row gap-[32px]">
           <div className="flex-1">
@@ -136,7 +170,6 @@ export default function BencanaSection() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-[12px]">
-                  {/* CARD 1 - WEATHER */}
                   <div className="bg-white border border-[#e5e7eb] rounded-[8px] p-[16px_20px]">
                     <div className="flex justify-between items-center mb-[12px]">
                       <span className="text-[10px] font-[700] font-mono text-[#9ca3af]">PRAKIRAAN CUACA BESOK</span>
@@ -159,7 +192,6 @@ export default function BencanaSection() {
                     )}
                   </div>
 
-                  {/* CARD 2 - QUAKE */}
                   <div className="bg-white border border-[#e5e7eb] rounded-[8px] p-[16px_20px]">
                     <div className="flex justify-between items-center mb-[12px]">
                       <span className="text-[10px] font-[700] font-mono text-[#9ca3af]">GEMPA BUMI TERAKHIR</span>
@@ -182,7 +214,6 @@ export default function BencanaSection() {
                     </div>
                   </div>
 
-                  {/* CARD 3 - WARNING */}
                   <div className="bg-white border border-[#e5e7eb] rounded-[8px] p-[16px_20px]">
                     <div className="flex justify-between items-center mb-[12px]">
                       <span className="text-[10px] font-[700] font-mono text-[#9ca3af]">STATUS PERINGATAN DINI</span>
@@ -200,78 +231,106 @@ export default function BencanaSection() {
                       </div>
                     )}
                   </div>
-                  <p className="text-[11px] text-[#9ca3af] font-mono mt-[8px]">
-                    Data bersumber dari BMKG — Badan Meteorologi, Klimatologi, dan Geofisika
-                  </p>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex-1">
-            <h3 className="text-[13px] font-[500] text-[#374151] mb-[8px]">Peringatan aktif BMKG</h3>
-            <div className="relative overflow-hidden min-h-[180px]">
+          <div className="flex-1">            <h3 className="text-[13px] font-[600] tracking-wider text-[#374151] uppercase mb-[16px]">Peringatan aktif BMKG</h3>
+            <div 
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+              onTouchStart={(e) => { touchStartX.current = e.touches[0].clientY; }}
+              onTouchEnd={(e) => {
+                if (touchStartX.current === null) return;
+                const delta = e.changedTouches[0].clientY - touchStartX.current;
+                if (delta < -30) handleNext();
+                else if (delta > 30) handlePrev();
+                touchStartX.current = null;
+              }}
+              className="relative overflow-hidden w-full h-[320px] group border-l border-gray-100 pl-4"
+            >
               {carouselLoading ? (
-                <div className="flex gap-[12px]">
+                <div className="flex flex-col gap-[12px]">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex-1 bg-[#f3f4f6] animate-pulse h-[160px] rounded-[8px]"></div>
+                    <div key={i} className="flex-1 bg-gray-50 animate-pulse h-[90px] rounded-[12px]"></div>
                   ))}
                 </div>
               ) : warnings.length === 0 ? (
-                <div className="bg-[#fafafa] border border-[#e5e7eb] rounded-[8px] p-[32px] text-center flex flex-col items-center justify-center h-full">
-                  <div className="flex items-center gap-2">
-                    <div className="w-[8px] h-[8px] rounded-full bg-[#22c55e]"></div>
-                    <span className="text-[13px] text-[#374151]">Tidak ada peringatan dini aktif saat ini</span>
+                <div className="bg-[#fafafa] border border-[#e5e7eb] rounded-[16px] p-[40px] text-center flex flex-col items-center justify-center h-full">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-[8px] h-[8px] rounded-full bg-green-500 animate-pulse"></div>
+                    <span className="text-[14px] font-[600] text-[#0a0a0a]">Aman</span>
                   </div>
-                  <span className="text-[11px] text-[#9ca3af] font-mono mt-[4px]">Data diperbarui setiap saat oleh BMKG</span>
+                  <span className="text-[11px] text-[#9ca3af] font-mono tracking-tight uppercase">Tidak ada peringatan dini aktif</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-[12px]">
-                  {getVisibleItems().map((v, i) => {
-                    const isCenter = i === 1;
-                    return (
-                      <div
-                        key={`${v.index}-${i}`}
-                        onClick={() => setActiveIndex(v.index)}
-                        className={`transition-all duration-300 cursor-pointer flex-shrink-0 ${
-                          isCenter 
-                          ? "w-[calc(40%-12px)] bg-white border-[#d1d5db] scale-100 opacity-100 shadow-[0_4px_12px_rgba(0,0,0,0.06)]" 
-                          : "w-[calc(30%-6px)] bg-[#fafafa] border-[#e5e7eb] scale-95 opacity-60"
-                        } border rounded-[10px] p-[16px] lg:p-[20px]`}
-                      >
-                        <span className="block text-[10px] font-[700] font-mono text-[#9ca3af] mb-[8px]">PERINGATAN DINI</span>
-                        <h4 className="text-[13px] lg:text-[14px] font-[600] text-[#0a0a0a] line-clamp-2 leading-snug">{v.item.judul}</h4>
-                        <p className="text-[11px] lg:text-[12px] text-[#6b7280] line-clamp-2 mt-[6px]">{v.item.deskripsi}</p>
-                        <div className="text-[10px] lg:text-[11px] text-[#9ca3af] font-mono mt-[8px] uppercase">{v.item.waktu}</div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <>
+                  <button 
+                    onClick={handlePrev}
+                    className="absolute left-1/2 -translate-x-1/2 top-1 z-20 w-8 h-8 rounded-full bg-white/80 backdrop-blur-md border border-white/20 shadow-md flex items-center justify-center hover:bg-white transition-all opacity-0 group-hover:opacity-100"
+                  >
+                    <svg className="w-[16px] h-[16px] text-[#0a0a0a]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                  <button 
+                    onClick={handleNext}
+                    className="absolute left-1/2 -translate-x-1/2 bottom-1 z-20 w-8 h-8 rounded-full bg-white/80 backdrop-blur-md border border-white/20 shadow-md flex items-center justify-center hover:bg-white transition-all opacity-0 group-hover:opacity-100"
+                  >
+                    <svg className="w-[16px] h-[16px] text-[#0a0a0a]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                  
+                    <div 
+                      ref={trackRef}
+                      className={`flex flex-col items-stretch w-full ${transitionEnabled ? "transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)" : ""}`}
+                      style={{ 
+                        transform: `translateY(-${(activeIndex - 1) * (100 / (warnings.length * 3))}%)`,
+                        height: `${(warnings.length * 3) * 100}px` 
+                      }}
+                    >
+                    {infiniteWarnings.map((w, idx) => {
+                      const isActive = idx === activeIndex;
+                      return (
+                        <div
+                          key={`${idx}`}
+                          onClick={() => setActiveIndex(idx)}
+                          className={`flex-shrink-0 transition-all duration-500`}
+                          style={{ height: `${100 / (warnings.length * 3)}%` }}
+                        >
+                          <div className={`mx-2 my-1 border rounded-[12px] p-[16px] bg-white transition-all duration-500 overflow-hidden ${
+                            isActive 
+                            ? "border-[#0a0a0a]/10 shadow-[0_8px_16px_rgba(0,0,0,0.05)] scale-100 z-10 opacity-100" 
+                            : "border-gray-50 shadow-none bg-gray-50/10 scale-95 opacity-40 blur-[0.2px] cursor-pointer"
+                          }`}>
+                            <div className="flex justify-between items-center mb-1.5">
+                              <span className={`text-[8px] font-[800] font-mono px-1.5 py-0.5 rounded-full ${isActive ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
+                                ALERT
+                              </span>
+                              <span className="text-[9px] text-gray-400 font-mono tracking-tighter uppercase font-bold">{w.waktu.split(" ")[0]}</span>
+                            </div>
+                            <h4 className={`text-[13px] font-[700] text-[#0a0a0a] line-clamp-1 leading-tight mb-1`}>
+                              {w.judul}
+                            </h4>
+                            <p className="text-[11px] text-[#6b7280] line-clamp-1 leading-tight opacity-80">
+                              {w.deskripsi}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
-            
-            {warnings.length > 0 && (
-              <div className="flex gap-[8px] justify-center mt-[16px]">
-                <button 
-                  onClick={() => setActiveIndex((activeIndex - 1 + warnings.length) % warnings.length)}
-                  className="w-[32px] h-[32px] rounded-full border border-[#e5e7eb] bg-white hover:bg-[#f9fafb] flex items-center justify-center transition-colors"
-                >
-                  <svg className="w-[14px] h-[14px] text-[#374151]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </button>
-                <button 
-                  onClick={() => setActiveIndex((activeIndex + 1) % warnings.length)}
-                  className="w-[32px] h-[32px] rounded-full border border-[#e5e7eb] bg-white hover:bg-[#f9fafb] flex items-center justify-center transition-colors"
-                >
-                  <svg className="w-[14px] h-[14px] text-[#374151]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </button>
-              </div>
-            )}
-            
-            <p className="text-[11px] text-[#9ca3af] font-mono mt-[12px]">
-              Peringatan dini dari BMKG Nowcast — diperbarui setiap saat
+
+            <p className="text-[11px] text-[#9ca3af] font-mono mt-8 text-center uppercase tracking-widest opacity-60">
+              Live BMKG Nowcast — Auto Pulse every 4s
             </p>
           </div>
         </div>
+
+        <p className="text-[11px] text-[#9ca3af] font-mono mt-12 text-center">
+          Data bersumber dari BMKG — Badan Meteorologi, Klimatologi, dan Geofisika & Nowcast
+        </p>
       </div>
     </section>
   );
