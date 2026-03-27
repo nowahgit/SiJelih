@@ -74,6 +74,56 @@ export default function BencanaSection() {
     }
   }, [activeIndex, warnings.length]);
 
+  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const provinceToAdm4: Record<string, string> = {
+    "Aceh": "11.71.01.1001",
+    "Sumatera Utara": "12.71.01.1001",
+    "Sumatera Barat": "13.71.01.1001",
+    "Riau": "14.71.01.1001",
+    "Jambi": "15.71.01.1001",
+    "Sumatera Selatan": "16.71.01.1001",
+    "Bengkulu": "17.71.01.1001",
+    "Lampung": "18.71.01.1001",
+    "Kepulauan Bangka Belitung": "19.71.01.1001",
+    "Kepulauan Riau": "21.71.01.1001",
+    "DKI Jakarta": "31.71.01.1001",
+    "Daerah Khusus Ibukota Jakarta": "31.71.01.1001",
+    "Jawa Barat": "32.73.08.1001",
+    "Jawa Tengah": "33.74.07.1001",
+    "DI Yogyakarta": "34.71.04.1001",
+    "Daerah Istimewa Yogyakarta": "34.71.04.1001",
+    "Jawa Timur": "35.78.15.1001",
+    "Banten": "36.73.01.1001",
+    "Bali": "51.71.01.1001",
+    "Nusa Tenggara Barat": "52.71.01.1001",
+    "Nusa Tenggara Timur": "53.71.01.1001",
+    "Kalimantan Barat": "61.71.01.1001",
+    "Kalimantan Tengah": "62.71.01.1001",
+    "Kalimantan Selatan": "63.71.01.1001",
+    "Kalimantan Timur": "64.72.01.1001",
+    "Kalimantan Utara": "65.71.01.1001",
+    "Sulawesi Utara": "71.71.01.1001",
+    "Sulawesi Tengah": "72.71.01.1001",
+    "Sulawesi Selatan": "73.71.01.1001",
+    "Sulawesi Tenggara": "74.71.01.1001",
+    "Gorontalo": "75.71.01.1001",
+    "Sulawesi Barat": "76.02.01.1001",
+    "Maluku": "81.71.01.1001",
+    "Maluku Utara": "82.71.01.1001",
+    "Papua": "91.71.01.1001",
+    "Papua Barat": "92.71.01.1001",
+  };
+
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -82,35 +132,87 @@ export default function BencanaSection() {
     setSearchError("");
     
     try {
-      const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&countrycodes=id&format=json&addressdetails=1&limit=1`);
-      const nomData = await nomRes.json();
+      const { geoSearch, searchAdm4Code } = await import("@/lib/bmkg");
+      
+      const nomData = await geoSearch(searchQuery);
 
-      if (nomData.length === 0) {
+      if (!nomData || nomData.length === 0) {
         setSearchError("Wilayah tidak ditemukan");
         setSearchLoading(false);
         return;
       }
 
       const location = nomData[0];
+      const lat = parseFloat(location.lat);
+      const lon = parseFloat(location.lon);
       const displayName = location.display_name;
+      const isIndonesia = location.address?.country_code === "id";
+      const province = location.address?.state || "";
       
       const bmkgBase = await getLatestBMKGData();
       
       let weather = null;
-      const kodeWilayah = location.address?.postcode || ""; 
+      let closestGempa = bmkgBase?.autoGempa;
+      let distance = null;
+      let weatherFallback = false;
+      let aiFoundCode = false;
+
+      if (isIndonesia) {
+        if (bmkgBase?.gempaDirasakan?.length > 0) {
+          let minDistance = Infinity;
+          bmkgBase.gempaDirasakan.forEach((g: any) => {
+            const [gLat, gLon] = g.Coordinates.split(",").map(parseFloat);
+            const dist = getDistance(lat, lon, gLat, gLon);
+            if (dist < minDistance) {
+              minDistance = dist;
+              closestGempa = g;
+              distance = dist;
+            }
+          });
+        }
+
+        // Mencari kode ADM4 (Kelurahan) secara presisi menggunakan AI
+      const adm4Code = await searchAdm4Code({
+        address: {
+          village: location.address?.village || location.address?.suburb || location.address?.neighbourhood || "",
+          city_district: location.address?.city_district || location.address?.town || "",
+          city: location.address?.city || location.address?.county || "",
+          state: location.address?.state || ""
+        }
+      });
       
-      if (kodeWilayah) {
-        weather = await getWeatherForecast(kodeWilayah);
+      if (adm4Code) {
+        weather = await getWeatherForecast(adm4Code);
+        if (weather && weather.length > 0) aiFoundCode = true;
       }
+
+      if (!weather || weather.length === 0) {
+        const fallbackCode = provinceToAdm4[province];
+        if (fallbackCode) {
+          weather = await getWeatherForecast(fallbackCode);
+          weatherFallback = true;
+        }
+      }
+  }
 
       setSearchResult({
         wilayah: displayName.split(",")[0],
         displayName: displayName,
+        isIndonesia,
+        lat,
+        lon,
         weather: weather,
-        bmkg: bmkgBase
+        weatherFallback,
+        aiFoundCode,
+        bmkg: {
+          ...bmkgBase,
+          closestGempa,
+          distance
+        }
       });
 
     } catch (err) {
+      console.error(err);
       setSearchError("Gagal mengambil data");
     } finally {
       setSearchLoading(false);
@@ -158,7 +260,7 @@ export default function BencanaSection() {
               {searchLoading ? (
                 <div className="bg-[#fafafa] border border-[#e5e7eb] rounded-[8px] p-[40px] text-center flex flex-col items-center justify-center">
                   <div className="w-[24px] h-[24px] border-[2px] border-[#e5e7eb] border-top-[#0a0a0a] rounded-full animate-spin"></div>
-                  <span className="text-[13px] text-[#9ca3af] mt-[12px]">Mengambil data BMKG...</span>
+                  <span className="text-[13px] text-[#9ca3af] mt-[12px]">Menganalisis wilayah & cuaca...</span>
                 </div>
               ) : !searchResult ? (
                 <div className="bg-[#fafafa] border border-[#e5e7eb] rounded-[8px] p-[40px] text-center flex flex-col items-center gap-[12px]">
@@ -172,46 +274,86 @@ export default function BencanaSection() {
                 <div className="flex flex-col gap-[12px]">
                   <div className="bg-white border border-[#e5e7eb] rounded-[8px] p-[16px_20px]">
                     <div className="flex justify-between items-center mb-[12px]">
-                      <span className="text-[10px] font-[700] font-mono text-[#9ca3af]">PRAKIRAAN CUACA BESOK</span>
-                      <span className="text-[10px] font-[600] font-mono bg-[#f3f4f6] text-[#6b7280] px-[8px] py-[2px] rounded-[4px]">BMKG</span>
+                      <span className="text-[10px] font-[700] font-mono text-[#9ca3af]">LOKASI PENCARIAN</span>
+                      <span className="text-[10px] font-[600] font-mono bg-[#f3f4f6] text-[#6b7280] px-[8px] py-[2px] rounded-[4px] uppercase">{searchResult.isIndonesia ? "Indonesia" : "International"}</span>
                     </div>
-                    {searchResult.weather && searchResult.weather.length > 3 ? (
-                      <div>
-                        <div className="text-[15px] font-[600] text-[#0a0a0a]">{searchResult.wilayah}</div>
-                        <div className="text-[14px] text-[#374151] mt-0.5">{searchResult.weather[3].cuaca}</div>
-                        <div className="flex items-baseline gap-1 mt-2">
-                          <span className="text-[24px] font-[800] text-[#0a0a0a] tracking-tight">{searchResult.weather[3].suhu}</span>
-                          <span className="text-[14px] font-[600] text-[#0a0a0a]">°C</span>
-                        </div>
-                        <div className="text-[12px] text-[#6b7280] font-mono mt-2">
-                          RH: {searchResult.weather[3].kelembapan}% | WIND: {searchResult.weather[3].angin_kmh} KM/H
-                        </div>
+                    <div>
+                      <div className="text-[15px] font-[600] text-[#0a0a0a] line-clamp-1">{searchResult.wilayah}</div>
+                      <div className="text-[12px] text-[#6b7280] line-clamp-1 mt-0.5">{searchResult.displayName}</div>
+                      <div className="text-[11px] text-[#9ca3af] font-mono mt-2 uppercase">
+                        LAT: {searchResult.lat.toFixed(4)} | LON: {searchResult.lon.toFixed(4)}
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-[#e5e7eb] rounded-[8px] p-[16px_20px]">
+                    <div className="flex justify-between items-center mb-[12px]">
+                      <span className="text-[10px] font-[700] font-mono text-[#9ca3af]">PRAKIRAAN CUACA BESOK</span>
+                      <div className="flex gap-2">
+                        {searchResult.aiFoundCode && (
+                          <span className="text-[9px] font-[700] font-mono bg-blue-50 text-blue-600 border border-blue-100 px-[8px] py-[2px] rounded-[4px]">PRECISE AI</span>
+                        )}
+                        <span className="text-[10px] font-[600] font-mono bg-[#f3f4f6] text-[#6b7280] px-[8px] py-[2px] rounded-[4px]">BMKG</span>
+                      </div>
+                    </div>
+                    {searchResult.isIndonesia ? (
+                      searchResult.weather && searchResult.weather.length > 3 ? (
+                        <div>
+                          {searchResult.weatherFallback && (
+                            <div className="text-[9px] font-[700] text-[#f59e0b] bg-[#fffbeb] border border-[#fef3c7] px-2 py-0.5 rounded-full mb-2 inline-block">
+                              DATA DARI IBU KOTA PROVINSI (FALLBACK)
+                            </div>
+                          )}
+                          <div className="text-[14px] text-[#374151] mt-0.5">{searchResult.weather[3].cuaca}</div>
+                          <div className="flex items-baseline gap-1 mt-2">
+                            <span className="text-[24px] font-[800] text-[#0a0a0a] tracking-tight">{searchResult.weather[3].suhu}</span>
+                            <span className="text-[14px] font-[600] text-[#0a0a0a]">°C</span>
+                          </div>
+                          <div className="text-[12px] text-[#6b7280] font-mono mt-2">
+                            RH: {searchResult.weather[3].kelembapan}% | WIND: {searchResult.weather[3].angin_kmh} KM/H
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-[13px] text-[#9ca3af] py-2 italic font-mono uppercase tracking-tighter">
+                          CUACA TIDAK TERSEDIA (ADM4 ERR)
+                        </div>
+                      )
                     ) : (
-                      <div className="text-[13px] text-[#9ca3af] py-2">Data prakiraan tidak tersedia untuk wilayah ini</div>
+                      <div className="text-[13px] text-[#9ca3af] py-2">
+                        Prakiraan cuaca BMKG hanya tersedia untuk wilayah Indonesia.
+                      </div>
                     )}
                   </div>
 
                   <div className="bg-white border border-[#e5e7eb] rounded-[8px] p-[16px_20px]">
                     <div className="flex justify-between items-center mb-[12px]">
-                      <span className="text-[10px] font-[700] font-mono text-[#9ca3af]">GEMPA BUMI TERAKHIR</span>
+                      <span className="text-[10px] font-[700] font-mono text-[#9ca3af]">GEMPA TERDEKAT DARI LOKASI</span>
                       <span className="text-[10px] font-[600] font-mono bg-[#f3f4f6] text-[#6b7280] px-[8px] py-[2px] rounded-[4px]">BMKG</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-[28px] font-[800] text-[#0a0a0a] tracking-tight">M{searchResult.bmkg?.autoGempa?.Magnitude}</div>
-                      <div className="flex gap-2">
-                        {parseFloat(searchResult.bmkg?.autoGempa?.Magnitude) >= 5.0 && (
-                          <span className="bg-[#fee2e2] text-[#991b1b] border border-[#fecaca] text-[10px] font-[700] font-mono px-[8px] py-[2px] rounded-[4px]">SIGNIFIKAN</span>
+
+                    {searchResult.bmkg?.closestGempa ? (
+                      <div>
+                        {searchResult.bmkg.distance !== null && (
+                        <div className="text-[11px] font-[700] text-[#2563eb] font-mono mb-2">
+                          JARAK: {Math.round(searchResult.bmkg.distance)} KM DARI TITIK CARI
+                        </div>
                         )}
-                        {searchResult.bmkg?.autoGempa?.Potensi?.includes("Potensi tsunami") && (
-                          <span className="bg-[#fef9c3] text-[#854d0e] border border-[#fef08a] text-[10px] font-[700] font-mono px-[8px] py-[2px] rounded-[4px]">POTENSI TSUNAMI</span>
-                        )}
+                        <div className="flex items-center gap-3">
+                          <div className="text-[28px] font-[800] text-[#0a0a0a] tracking-tight">M{searchResult.bmkg?.closestGempa?.Magnitude}</div>
+                          <div className="flex gap-2">
+                            {parseFloat(searchResult.bmkg?.closestGempa?.Magnitude) >= 5.0 && (
+                              <span className="bg-[#fee2e2] text-[#991b1b] border border-[#fecaca] text-[10px] font-[700] font-mono px-[8px] py-[2px] rounded-[4px]">SIGNIFIKAN</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-[13px] text-[#374151] mt-1 line-clamp-1">{searchResult.bmkg?.closestGempa?.Wilayah}</div>
+                        <div className="text-[12px] text-[#6b7280] font-mono mt-2 uppercase">
+                          {searchResult.bmkg?.closestGempa?.Kedalaman} | {searchResult.bmkg?.closestGempa?.Tanggal} {searchResult.bmkg?.closestGempa?.Jam}
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-[13px] text-[#374151] mt-1 line-clamp-1">{searchResult.bmkg?.autoGempa?.Wilayah}</div>
-                    <div className="text-[12px] text-[#6b7280] font-mono mt-2 uppercase">
-                      {searchResult.bmkg?.autoGempa?.Kedalaman} | {searchResult.bmkg?.autoGempa?.Tanggal} {searchResult.bmkg?.autoGempa?.Jam}
-                    </div>
+                    ) : (
+                      <div className="text-[13px] text-[#9ca3af] py-2">Data gempa tidak tersedia</div>
+                    )}
                   </div>
 
                   <div className="bg-white border border-[#e5e7eb] rounded-[8px] p-[16px_20px]">
@@ -321,10 +463,6 @@ export default function BencanaSection() {
                 </>
               )}
             </div>
-
-            <p className="text-[11px] text-[#9ca3af] font-mono mt-8 text-center uppercase tracking-widest opacity-60">
-              Live BMKG Nowcast — Auto Pulse every 4s
-            </p>
           </div>
         </div>
 

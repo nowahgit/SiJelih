@@ -12,6 +12,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "SiJelih — Verifikasi Informasi Bencana",
   description: "Dapatkan kebenaran sekarang dari data resmi BMKG",
+  other: {
+    "dicoding:email": "elnoahamm@gmail.com",
+  },
 };
 
 export default function RootLayout({

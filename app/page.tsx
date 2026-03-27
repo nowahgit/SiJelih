@@ -6,6 +6,7 @@ import TickerBar from "@/components/TickerBar";
 import LandingNavbar from "@/components/LandingNavbar";
 import { Nunito } from "next/font/google";
 import PageTransition from "@/components/PageTransition";
+import EmergencyChatbot from "@/components/EmergencyChatbot";
 
 const nunito = Nunito({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
 
@@ -18,101 +19,97 @@ export default function LandingPage() {
       <PageTransition>
         <TickerBar />
 
-        <section className="bg-white max-w-[1100px] mx-auto pt-[100px] pb-[80px] px-[24px]">
-        <div className="flex flex-col lg:flex-row gap-[64px] items-center">
+        <section className="bg-white max-w-[1100px] mx-auto pt-[40px] md:pt-[100px] pb-[60px] md:pb-[80px] px-[20px] min-[400px]:px-[24px]">
+        <div className="flex flex-col lg:flex-row gap-[48px] md:gap-[64px] items-center">
           
-          <div className="flex-1 text-center md:text-left">
-            <div className="inline-flex items-center gap-[6px] border border-[#e5e7eb] bg-[#f9fafb] rounded-full px-[12px] py-[3px] mb-[28px]">
+          <div className="flex-1 text-center lg:text-left w-full order-none overflow-hidden">
+            <div className="inline-flex items-center gap-[6px] border border-[#e5e7eb] bg-[#f9fafb] rounded-full px-[10px] py-[3px] mb-[20px] md:mb-[28px]">
               <div className="w-[5px] h-[5px] bg-[#2563eb] rounded-full"></div>
-              <span className="font-[500] text-[11px] text-[#6b7280] font-mono">
+              <span className="font-[600] text-[9px] md:text-[11px] text-[#6b7280] font-mono uppercase tracking-[0.05em]">
                 Didukung data resmi BMKG
               </span>
             </div>
             
-            <h1 className="font-[800] text-[36px] md:text-[54px] leading-[1.1] tracking-[-0.03em] text-[#0a0a0a] mb-[20px]">
+            <h1 className="font-[800] text-[24px] min-[360px]:text-[26px] min-[400px]:text-[38px] md:text-[54px] leading-[1.15] tracking-[-0.03em] text-[#0a0a0a] mb-[20px] text-balance max-w-full overflow-hidden">
               Jeli sebelum percaya.
             </h1>
             
-            <p className="font-[400] text-[17px] text-[#6b7280] leading-[1.7] max-w-[480px] mx-auto md:mx-0 mb-[40px]">
-              Verifikasi informasi bencana alam dalam hitungan detik menggunakan tiga sumber data resmi BMKG.
+            <p className="font-[400] text-[14px] md:text-[17px] text-[#6b7280] leading-[1.6] md:leading-[1.7] max-w-[480px] mx-auto lg:mx-0 mb-[32px] md:mb-[40px]">
+              Verifikasi informasi bencana alam dalam hitungan detik menggunakan sumber data resmi BMKG secara real-time.
             </p>
 
-            <div className="w-full h-[52px] overflow-hidden">
+            <div className="w-full h-[52px] overflow-hidden mb-4 md:mb-0">
               <TypewriterInput />
             </div>
             
-            <div className="mt-[36px] flex flex-wrap justify-center md:justify-start gap-[12px]">
-              <Link href="/dashboard" className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-[600] px-[22px] py-[10px] rounded-[7px] transition-colors shadow-none border border-transparent">
+            <div className="mt-[24px] md:mt-[36px] flex flex-col min-[450px]:flex-row justify-center lg:justify-start gap-[12px]">
+              <Link href="/dashboard" className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-[600] px-[22px] py-[12px] md:py-[10px] rounded-[8px] transition-colors shadow-none border border-transparent text-center">
                 Verifikasi Sekarang
               </Link>
-              <Link href="#cara-kerja" className="bg-white border border-[#d1d5db] text-[#374151] text-[14px] font-[500] px-[22px] py-[10px] rounded-[7px] hover:bg-[#f9fafb] transition-colors">
+              <Link href="#cara-kerja" className="bg-white border border-[#d1d5db] text-[#374151] text-[14px] font-[500] px-[22px] py-[12px] md:py-[10px] rounded-[8px] hover:bg-[#f9fafb] transition-colors text-center">
                 Pelajari Cara Kerja
               </Link>
             </div>
           </div>
 
-          <div className="w-full lg:w-[420px] flex-shrink-0 max-w-[540px] lg:max-w-none mx-auto lg:mx-0">
-            <div className="font-mono text-[11px] text-[#9ca3af] mb-[10px] text-center md:text-left">
+          <div className="w-full lg:w-[420px] flex-shrink-0 max-w-[540px] lg:max-w-none mx-auto lg:mx-0 order-last">
+            <div className="font-mono text-[10px] text-[#9ca3af] mb-[12px] text-center lg:text-left uppercase tracking-wider font-[700]">
               Contoh hasil verifikasi
             </div>
-            <div className="bg-white border border-[#e5e7eb] rounded-[10px] overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.06)] text-left">
+            <div className="bg-white border border-[#e5e7eb] rounded-[12px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.04)] text-left transition-all">
               <div className="p-[16px_20px] border-b border-[#f3f4f6] flex justify-between items-start">
-                <span className="bg-[#dcfce7] text-[#166534] border border-[#bbf7d0] font-mono text-[11px] font-[700] px-[10px] py-[3px] rounded-[4px]">TERKONFIRMASI</span>
-                <span className="font-mono text-[12px] text-[#6b7280]">Confidence: 94%</span>
+                <span className="bg-[#dcfce7] text-[#166534] border border-[#bbf7d0] font-mono text-[10px] font-[700] px-[10px] py-[3px] rounded-[4px]">TERKONFIRMASI</span>
+                <span className="font-mono text-[11px] text-[#6b7280]">Confidence: 94%</span>
               </div>
               <div className="p-[16px_20px] border-b border-[#f3f4f6]">
                 <div className="font-mono text-[10px] font-[700] text-[#9ca3af] mb-[6px]">INPUT</div>
                 <p className="text-[13px] text-[#374151] leading-[1.5]">Gempa M6.2 mengguncang Cianjur pagi ini, BMKG keluarkan peringatan tsunami.</p>
                 
                 <div className="font-mono text-[10px] font-[700] text-[#9ca3af] mb-[6px] mt-[12px]">ANALISIS</div>
-                <p className="text-[13px] text-[#374151] leading-[1.5]">Data BMKG autogempa.json mengonfirmasi gempa M6.2 di wilayah Cianjur pada waktu yang sesuai. Tidak ada peringatan tsunami aktif dari sistem nowcast.</p>
+                <p className="text-[12px] md:text-[13px] text-[#374151] leading-[1.5]">Data BMKG autogempa.json mengonfirmasi gempa M6.2 di wilayah Cianjur pada waktu yang sesuai. Tidak ada peringatan tsunami aktif.</p>
               </div>
-              <div className="p-[12px_20px] bg-[#fafafa] flex justify-between items-center">
-                <span className="font-mono text-[11px] text-[#9ca3af]">Sumber: BMKG autogempa.json · nowcast CAP</span>
-                <span className="font-mono text-[11px] text-[#9ca3af]">20 Mar 2026 · 09.14 WIB</span>
+              <div className="p-[12px_20px] bg-[#fafafa] flex flex-col min-[400px]:flex-row justify-between items-center gap-1">
+                <span className="font-mono text-[10px] text-[#9ca3af]">Sumber: BMKG autogempa · nowcast</span>
+                <span className="font-mono text-[10px] text-[#9ca3af]">20 Mar 2026 · 09.14 WIB</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-[72px] pt-[48px] border-t border-[#f3f4f6] max-w-[1100px] mx-auto px-[24px] flex flex-col lg:flex-row justify-between items-center gap-[48px]">
+        <div className="mt-[60px] md:mt-[72px] pt-[40px] md:pt-[48px] border-t border-[#f3f4f6] flex flex-col lg:flex-row justify-between items-center gap-[40px] md:gap-[48px]">
           
-          <div className="flex items-center gap-[32px] md:gap-[48px] grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-300">
-            <div className="flex flex-col items-center md:items-start">
-              <span className="text-[10px] font-[700] tracking-widest text-[#9ca3af] uppercase mb-[12px] font-mono">MITRA DATA</span>
-              <div className="flex items-center gap-[32px]">
+          <div className="flex items-center gap-[32px] grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-300">
+            <div className="flex flex-col items-center lg:items-start w-full">
+              <span className="text-[9px] font-[700] tracking-widest text-[#9ca3af] uppercase mb-[16px] font-mono">MITRA DATA RESMI</span>
+              <div className="flex items-center gap-[32px] md:gap-[48px]">
                 <img 
                   src="https://ntt.bmkg.go.id/assets/images/LogoBMKG.png" 
                   alt="BMKG" 
-                  className="h-[32px] w-auto object-contain"
+                  className="h-[28px] md:h-[32px] w-auto object-contain"
                 />
                 <img 
                   src="https://dicoding-web-img.sgp1.cdn.digitaloceanspaces.com/original/commons/new-ui-logo.png" 
                   alt="Dicoding" 
-                  className="h-[22px] w-auto object-contain"
+                  className="h-[20px] md:h-[22px] w-auto object-contain"
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap justify-center md:justify-end items-center gap-[16px] md:gap-[40px] w-full lg:w-auto">
-            <div className="flex flex-col items-center md:items-end">
-              <div className="font-[700] text-[22px] md:text-[26px] text-[#0a0a0a] font-mono tracking-tighter">3x</div>
-              <div className="font-[600] text-[10px] text-[#9ca3af] mt-[2px] uppercase tracking-[0.1em]">Sumber Data</div>
+          <div className="grid grid-cols-3 md:flex md:flex-wrap justify-center lg:justify-end items-center gap-[24px] md:gap-[40px] w-full lg:w-auto">
+            <div className="flex flex-col items-center lg:items-end">
+              <div className="font-[700] text-[20px] md:text-[26px] text-[#0a0a0a] font-mono tracking-tighter">3x</div>
+              <div className="font-[600] text-[9px] text-[#9ca3af] mt-[2px] uppercase tracking-[0.05em]">Sumber</div>
             </div>
             
-            <div className="h-[24px] w-[1px] bg-[#e5e7eb] hidden sm:block"></div>
-
-            <div className="flex flex-col items-center md:items-end">
-              <div className="font-[700] text-[22px] md:text-[26px] text-[#0a0a0a] font-mono tracking-tighter">24/7</div>
-              <div className="font-[600] text-[10px] text-[#9ca3af] mt-[2px] uppercase tracking-[0.1em]">Real-time</div>
+            <div className="flex flex-col items-center lg:items-end">
+              <div className="font-[700] text-[20px] md:text-[26px] text-[#0a0a0a] font-mono tracking-tighter">24/7</div>
+              <div className="font-[600] text-[9px] text-[#9ca3af] mt-[2px] uppercase tracking-[0.05em]">Live</div>
             </div>
 
-            <div className="h-[24px] w-[1px] bg-[#e5e7eb] hidden sm:block"></div>
-
-            <div className="flex flex-col items-center md:items-end">
-              <div className="font-[700] text-[22px] md:text-[26px] text-[#0a0a0a] font-mono tracking-tighter">Vision</div>
-              <div className="font-[600] text-[10px] text-[#9ca3af] mt-[2px] uppercase tracking-[0.1em]">AI Powered</div>
+            <div className="flex flex-col items-center lg:items-end">
+              <div className="font-[700] text-[20px] md:text-[26px] text-[#0a0a0a] font-mono tracking-tighter">Vision</div>
+              <div className="font-[600] text-[9px] text-[#9ca3af] mt-[2px] uppercase tracking-[0.05em]">AI</div>
             </div>
           </div>
         </div>
@@ -219,103 +216,90 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-[80px] px-[24px] bg-white border-t border-[#f3f4f6]">
-        <div className="max-w-[1050px] mx-auto flex flex-col md:flex-row items-center gap-[64px]">
+      <section className="py-[60px] md:py-[80px] px-[24px] bg-white border-t border-[#f3f4f6]">
+        <div className="max-w-[1050px] mx-auto flex flex-col lg:flex-row items-center gap-[40px] md:gap-[64px]">
           
-          <div className="w-full md:w-[400px] flex-shrink-0">
+          <div className="w-full md:w-[320px] lg:w-[400px] flex-shrink-0 flex justify-center">
             <img 
               src="image/MASKOT_SIJELIH_WARNING.png" 
               alt="Maskot SiJelih" 
-              className="w-full h-auto aspect-square object-contain"
+              className="w-[200px] md:w-[300px] lg:w-full h-auto aspect-square object-contain"
             />
           </div>
 
-          <div className="flex-1">
-            <div className="font-[600] text-[11px] tracking-[0.08em] text-[#9ca3af] font-mono mb-[12px] uppercase">
+          <div className="flex-1 w-full">
+            <div className="font-[600] text-[10px] md:text-[11px] tracking-[0.08em] text-[#9ca3af] font-mono mb-[12px] uppercase text-center md:text-left">
               PERBANDINGAN
             </div>
-            <h2 className="font-[800] text-[34px] tracking-[-0.02em] text-[#0a0a0a] mb-[48px]">
+            <h2 className="font-[800] text-[28px] md:text-[34px] tracking-[-0.02em] text-[#0a0a0a] mb-[32px] md:mb-[48px] text-center md:text-left">
               SiJelih vs cara lama.
             </h2>
             
-            <div className="w-full relative overflow-x-auto pb-4 scrollbar-hide">
-              <div className="min-w-[450px] grid grid-cols-[1fr_repeat(2,100px)] md:grid-cols-[1fr_repeat(2,140px)] items-stretch">
+            <div className="w-full relative overflow-x-auto pb-4 scrollbar-hide -mx-[24px] px-[24px] md:mx-0 md:px-0">
+              <div className="min-w-[480px] grid grid-cols-[1.2fr_repeat(2,1fr)] items-stretch">
                 <div className="p-[20px_0] border-b border-[#f3f4f6]"></div>
-                <div className="relative bg-[#f0f7ff]/50 border-x border-[#dbeafe] border-t border-[#dbeafe] rounded-t-[12px] p-[24px_16px] flex flex-col items-center justify-end">
-                  <div className="absolute top-0 -translate-y-1/2 bg-[#2563eb] text-white text-[10px] font-[800] tracking-wider px-[10px] py-[3px] rounded-full uppercase shadow-sm">Terjeli</div>
-                  <span className="font-[800] text-[13px] text-[#1d4ed8]">SiJelih</span>
+                <div className="relative bg-[#f0f7ff]/50 border-x border-[#dbeafe] border-t border-[#dbeafe] rounded-t-[12px] p-[20px_12px] flex flex-col items-center justify-end">
+                  <div className="absolute top-0 -translate-y-1/2 bg-[#2563eb] text-white text-[9px] font-[800] tracking-wider px-[8px] py-[2px] rounded-full uppercase shadow-sm whitespace-nowrap">Paling Jeli</div>
+                  <span className="font-[800] text-[12px] md:text-[13px] text-[#1d4ed8]">SiJelih</span>
                 </div>
-                <div className="p-[24px_12px] border-b border-[#f3f4f6] flex items-end justify-center text-center">
-                  <span className="font-[600] text-[12px] text-[#9ca3af]">Cara Lama</span>
+                <div className="p-[20px_12px] border-b border-[#f3f4f6] flex items-end justify-center text-center">
+                  <span className="font-[600] text-[11px] md:text-[12px] text-[#9ca3af]">Cara Lama</span>
                 </div>
 
-                <div className="p-[16px_0] border-b border-[#f3f4f6] flex flex-col justify-center">
-                  <span className="text-[13px] font-[600] text-[#0a0a0a]">Kecepatan</span>
+                <div className="p-[14px_0] border-b border-[#f3f4f6] flex flex-col justify-center">
+                  <span className="text-[12px] md:text-[13px] font-[600] text-[#0a0a0a]">Kecepatan</span>
                 </div>
-                <div className="bg-[#f0f7ff]/50 border-x border-[#dbeafe] border-b border-[#f3f4f6]/10 p-[16px_12px] flex flex-col items-center justify-center">
-                  <div className="flex items-center gap-[4px] text-[#1d4ed8] font-[700] text-[13px]">
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                <div className="bg-[#f0f7ff]/50 border-x border-[#dbeafe] border-b border-[#f3f4f6]/10 p-[14px_12px] flex flex-col items-center justify-center">
+                  <div className="flex items-center gap-[4px] text-[#1d4ed8] font-[700] text-[12px] md:text-[13px]">
+                    <svg className="w-3 h-3 md:w-3.5 md:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                     Detik
                   </div>
                 </div>
-                <div className="p-[16px_12px] border-b border-[#f3f4f6] flex items-center justify-center text-[12px] text-[#9ca3af] text-center">
+                <div className="p-[14px_12px] border-b border-[#f3f4f6] flex items-center justify-center text-[11px] md:text-[12px] text-[#9ca3af] text-center">
                   Menit/Jam
                 </div>
 
-                <div className="p-[16px_0] border-b border-[#f3f4f6] flex flex-col justify-center">
-                  <span className="text-[13px] font-[600] text-[#0a0a0a]">Data BMKG</span>
+                <div className="p-[14px_0] border-b border-[#f3f4f6] flex flex-col justify-center">
+                  <span className="text-[12px] md:text-[13px] font-[600] text-[#0a0a0a]">Data BMKG</span>
                 </div>
-                <div className="bg-[#f0f7ff]/50 border-x border-[#dbeafe] border-b border-[#f3f4f6]/10 p-[16px_12px] flex flex-col items-center justify-center">
-                  <div className="flex items-center gap-[4px] text-[#1d4ed8] font-[700] text-[13px]">
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                <div className="bg-[#f0f7ff]/50 border-x border-[#dbeafe] border-b border-[#f3f4f6]/10 p-[14px_12px] flex flex-col items-center justify-center">
+                  <div className="flex items-center gap-[4px] text-[#1d4ed8] font-[700] text-[12px] md:text-[13px]">
+                    <svg className="w-3 h-3 md:w-3.5 md:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                     Real-time
                   </div>
                 </div>
-                <div className="p-[16px_12px] border-b border-[#f3f4f6] flex items-center justify-center text-[12px] text-[#9ca3af] text-center">
+                <div className="p-[14px_12px] border-b border-[#f3f4f6] flex items-center justify-center text-[11px] md:text-[12px] text-[#9ca3af] text-center">
                   Arsip
                 </div>
 
-                <div className="p-[16px_0] border-b border-[#f3f4f6] flex flex-col justify-center">
-                  <span className="text-[13px] font-[600] text-[#0a0a0a]">Konteks</span>
+                <div className="p-[14px_0] border-b border-[#f3f4f6] flex flex-col justify-center">
+                  <span className="text-[12px] md:text-[13px] font-[600] text-[#0a0a0a]">Konteks</span>
                 </div>
-                <div className="bg-[#f0f7ff]/50 border-x border-[#dbeafe] border-b border-[#f3f4f6]/10 p-[16px_12px] flex flex-col items-center justify-center">
-                  <div className="flex items-center gap-[4px] text-[#1d4ed8] font-[700] text-[13px]">
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                <div className="bg-[#f0f7ff]/50 border-x border-[#dbeafe] border-b border-[#f3f4f6]/10 p-[14px_12px] flex flex-col items-center justify-center">
+                  <div className="flex items-center gap-[4px] text-[#1d4ed8] font-[700] text-[12px] md:text-[13px]">
+                    <svg className="w-3 h-3 md:w-3.5 md:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                     Kelurahan
                   </div>
                 </div>
-                <div className="p-[16px_12px] border-b border-[#f3f4f6] flex items-center justify-center text-[12px] text-[#9ca3af] text-center">
+                <div className="p-[14px_12px] border-b border-[#f3f4f6] flex items-center justify-center text-[11px] md:text-[12px] text-[#9ca3af] text-center">
                   Nasional
                 </div>
 
-                <div className="p-[16px_0] border-b border-[#f3f4f6] flex flex-col justify-center">
-                  <span className="text-[13px] font-[600] text-[#0a0a0a]">Histori</span>
+                <div className="p-[14px_0] border-b border-[#f3f4f6] flex flex-col justify-center">
+                  <span className="text-[12px] md:text-[13px] font-[600] text-[#0a0a0a]">AI Vision</span>
                 </div>
-                <div className="bg-[#f0f7ff]/50 border-x border-[#dbeafe] border-b border-[#f3f4f6]/10 p-[16px_12px] flex flex-col items-center justify-center">
-                  <div className="flex items-center gap-[4px] text-[#1d4ed8] font-[700] text-[13px]">
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                    Otomatis
-                  </div>
-                </div>
-                <div className="p-[16px_12px] border-b border-[#f3f4f6] flex items-center justify-center text-[12px] text-[#9ca3af] text-center">
-                  Manual
-                </div>
-
-                <div className="p-[16px_0] flex flex-col justify-center">
-                  <span className="text-[13px] font-[600] text-[#0a0a0a]">Foto</span>
-                </div>
-                <div className="bg-[#f0f7ff]/50 border-x border-[#dbeafe] border-b border-[#dbeafe] rounded-b-[12px] p-[16px_12px] flex flex-col items-center justify-center">
-                  <div className="flex items-center gap-[4px] text-[#1d4ed8] font-[700] text-[13px]">
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                <div className="bg-[#f0f7ff]/50 border-x border-[#dbeafe] border-b border-[#dbeafe] rounded-b-[12px] p-[14px_12px] flex flex-col items-center justify-center">
+                  <div className="flex items-center gap-[4px] text-[#1d4ed8] font-[700] text-[12px] md:text-[13px]">
+                    <svg className="w-3 h-3 md:w-3.5 md:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                     Bisa
                   </div>
                 </div>
-                <div className="p-[16px_12px] flex items-center justify-center text-[12px] text-[#9ca3af] text-center">
+                <div className="p-[14px_12px] border-b border-[#f3f4f6] flex items-center justify-center text-[11px] md:text-[12px] text-[#9ca3af] text-center">
                   Tidak bisa
                 </div>
               </div>
             </div>
-            <p className="mt-[24px] text-[#9ca3af] font-mono text-[10px] tracking-wider uppercase">
+            <p className="mt-[20px] text-[#9ca3af] font-mono text-[9px] md:text-[10px] tracking-wider uppercase text-center md:text-left">
               SiJelih menggunakan data langsung dari BMKG, bukan database pihak ketiga.
             </p>
           </div>
@@ -349,6 +333,8 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      <EmergencyChatbot />
     </div>
     </Suspense>
   );
