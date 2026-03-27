@@ -16,7 +16,7 @@ export default function AuthButton() {
       <div className="flex items-center gap-3">
         <span className="text-sm font-medium text-slate-700">{user.displayName}</span>
         {user.photoURL && (
-          <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full" />
+          <img src={user.photoURL} alt="Profile" referrerPolicy="no-referrer" className="w-8 h-8 rounded-full" />
         )}
         <button
           onClick={() => signOut(auth)}

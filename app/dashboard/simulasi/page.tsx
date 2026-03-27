@@ -146,7 +146,7 @@ export default function SimulasiPage() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[13px] font-[500] text-[#374151] hidden sm:block">{user?.displayName}</span>
-            <img src={user?.photoURL || ""} alt="Avatar" className="w-[32px] h-[32px] rounded-full object-cover shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb]" />
+            <img src={user?.photoURL || ""} alt="Avatar" referrerPolicy="no-referrer" className="w-[32px] h-[32px] rounded-full object-cover shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb]" />
           </div>
         </header>
 
